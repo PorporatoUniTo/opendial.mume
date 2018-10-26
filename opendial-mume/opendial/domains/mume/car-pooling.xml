@@ -1,0 +1,81 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<domain>
+
+    <!-- MuMe car pooling app -->
+
+    <initialstate>
+
+        <!-- Elaboration phases: u_u (ext) ==> a_u ==> a_m (partially ext) ==> u_m (ext) -->
+        <!-- Information variables: startSlot, [endSlot], stratDate, endDate, startTime, endTime, [vehicleType] -->
+
+        <!-- Starting prompt -->
+        <variable id="u_m">
+            <value>Benvenuto nel sistema di prenotazione MuMeChat!</value>
+        </variable>
+        <!-- The agent has three possible states:
+            - Information Extraction: the information for the request is incomplete
+                and the user has to insert more information
+            - Make Request: the information is complete and the request is in elaboration or
+                elaborated and the result has to be communicated to the user
+            - Finish: the session is terminated -->
+        <variable id="state">
+            <value>INFORMATION_EXTRACTION</value>
+        </variable>
+        <variable id="a_m">
+            <value>RETRIEVE_INFORMATION</value>
+        </variable>
+
+        <!-- JUST FOR TEST -->
+        <!-- This are the seven variable that collect the information about the user trip -->
+        <variable id="a_u">
+            <!-- The user can:
+                - Book a vehicle (BOOKING)
+                - Cancel the current operation (CANCEL) -->
+            <value>BOOKING</value>
+        </variable>
+        <!--
+        <variable id="startSlot">
+            <value>piazza Castello</value>
+        </variable>
+        <variable id="endSlot">
+            <value>Volvera</value>
+        </variable>
+        <variable id="startDate">
+            <value>25 Ottobre</value>
+        </variable>
+        <variable id="endDate">
+            <value>26 Ottobre</value>
+        </variable>
+        <variable id="startTime">
+            <value>14:00</value>
+        </variable>
+        <variable id="endTime">
+            <value>07:00</value>
+        </variable>
+        -->
+        <variable id="vehicleType">
+            <value>economy</value>
+        </variable>
+
+        <!--
+        <variable id="u_u">
+            <value>Voglio prendere una macchina il 26 ottobre alle 14 da piazza Castello e voglio posarla a Volvera alle sette del 29 Ottobre
+            </value>
+        </variable>
+        -->
+
+    </initialstate>
+
+    <!-- Dialogue management models (action selection and transition) -->
+    <import href="car-pooling-machine-action-selection.xml"/>
+
+    <!-- Natural language generation models - JUST FOR TEST -->
+    <import href="car-pooling-machine-utterance-selection.xml"/>
+
+    <!-- External module showing how to interface the dialogue system with an external
+    database (used here to find the trip prices and "book" the car) -->
+    <settings>
+        <modules>opendial.modules.mume.CarPoolingInformationExtraction,opendial.modules.mume.CarPoolingRequest</modules>
+        <!-- <modules>opendial.modules.mume.CarPoolingResponseGeneration</modules> -->
+    </settings>
+</domain>

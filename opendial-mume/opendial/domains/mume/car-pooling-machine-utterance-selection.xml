@@ -1,0 +1,68 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<domain id="MachineUtterance">
+
+    <model id="OutcomeElaboration" trigger="a_m">
+        <rule>
+            <case>
+                <condition>
+                    <if var="a_u" value="BOOKING"/>
+                    <if var="state" value="ELABORATE_REQUEST"/>
+                    <if var="a_m" value="OUTCOME_COMMUNICATION"/>
+                    <if var="requestResult" value="Success"/>
+                </condition>
+                <effect util="10">
+                    <set var="u_m" value="La tua richiesta e' stata accettata. Buon viaggio!"/>
+                </effect>
+            </case>
+            <case>
+                <condition>
+                    <if var="a_u" value="BOOKING"/>
+                    <if var="state" value="ELABORATE_REQUEST"/>
+                    <if var="a_m" value="OUTCOME_COMMUNICATION"/>
+                    <if var="requestResult" value="Failure"/>
+                </condition>
+                <effect util="10">
+                    <set var="u_m" value="La tua richiesta non e' stata accettata."/>
+                </effect>
+            </case>
+        </rule>
+    </model>
+
+    <!-- TODO
+    <model id="RetrieveInformation" trigger="a_m">
+        <rule>
+            <case>
+                <condition>
+                    <if var="a_u" value="BOOKING"/>
+                    <if var="state" value="INFORMATION_EXTRACTION"/>
+                    <if var="a_m" value="ASK_START_DATE"/>
+                </condition>
+                <effect util="1">
+                    <set var="a_m-prev" value="{a_m}"/>
+                    <set var="u_m" value="Che giorno vuoi partire?"/>
+                </effect>
+            </case>
+        </rule>
+    </model>
+    -->
+
+    <model id="AskConfirm" trigger="a_m">
+        <rule>
+            <case>
+                <condition>
+                    <if var="a_u" value="BOOKING"/>
+
+                    <if var="state" value="INFORMATION_EXTRACTION"/>
+
+                    <if var="a_m" value="ASK_CONFIRM"/>
+                </condition>
+                <effect util="10">
+                    <set var="u_m" value="Ricapitolando: vuoi partire il {startDate} alle {startTime}
+                        da {startSlot} con un veicolo {vehicleType} e posarlo il {endDate} alle {endTime}
+                         a {endSlot}. Giusto?"/>
+                    <set var="a_m" value="WAIT_CONFIRM"/>
+                </effect>
+            </case>
+        </rule>
+    </model>
+</domain>

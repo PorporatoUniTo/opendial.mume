@@ -1,0 +1,69 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<domain id="InformationElaboration">
+    <!-- Action selection module.
+        The only module select the next action of the machine accoding to its state -->
+
+    <model id="AgentActionSelection" trigger="endSlot,startSlot,startDate,endDate,startTime,endTime,vehicleType">
+        <rule id="CompleteInformation">
+            <case>
+                <condition>
+                    <!-- If the user is booking a car... -->
+                    <if var="a_u" value="BOOKING"/>
+
+                    <!-- ... and all the needed information has been provided... -->
+                    <if var="state" value="INFORMATION_EXTRACTION"/>
+                    <if var="startSlot" relation="!=" value="None"/>
+                    <if var="endSlot" relation="!=" value="None"/>
+                    <if var="startDate" relation="!=" value="None"/>
+                    <if var="endDate" relation="!=" value="None"/>
+                    <if var="startTime" relation="!=" value="None"/>
+                    <if var="endTime" relation="!=" value="None"/>
+                    <if var="vehicleType" relation="!=" value="None"/>
+                </condition>
+                <effect util="10">
+                    <!-- State changed -->
+                    <set var="state" value="INFORMATION_EXTRACTION"/>
+
+                    <!-- ... then make the reservation request -->
+                    <set var="a_m" value="ASK_CONFIRM"/>
+                </effect>
+            </case>
+        </rule>
+
+        <!-- If some some informstion is missing...
+        <rule id="MissingInformation">
+            <case>
+                <condition>
+                    <if var="a_u" value="BOOKING"/>
+                    <if var="state" value="INFORMATION_EXTRACTION"/>
+                    <if var="startDate" value="None"/>
+                </condition>
+                <effect util="2">
+                    <set var="state" value="INFORMATION_EXTRACTION"/>
+                    <set var="a_m" value="ASK_START_DATE"/>
+                </effect>
+            </case>
+        </rule>
+        -->
+    </model>
+
+    <model id="BookingConfirmation" trigger="u_u">
+        <rule id="Confirm">
+            <case>
+                <condition>
+                    <if var="a_u" value="BOOKING"/>
+                    <if var="state" value="INFORMATION_EXTRACTION"/>
+                    <if var="a_m" value="WAIT_CONFIRM"/>
+
+                    <!-- JUST FOR TEST: it should be 'yes' -->
+                    <if var="u_u" relation="!=" value="None"/>
+                </condition>
+                <effect>
+                    <if var="state" value="ELABORATE_REQUEST"/>
+                    <if var="a_m" value="SEND_REQUEST"/>
+                </effect>
+            </case>
+        </rule>
+    </model>
+
+</domain>
