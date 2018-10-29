@@ -1,5 +1,7 @@
 package opendial.modules.mume;
 
+import com.google.gson.JsonArray;
+import com.google.gson.JsonParser;
 import edu.stanford.nlp.ling.CoreAnnotations;
 import edu.stanford.nlp.ling.CoreLabel;
 import edu.stanford.nlp.ling.IndexedWord;
@@ -13,10 +15,10 @@ import opendial.DialogueState;
 import opendial.DialogueSystem;
 import opendial.modules.Module;
 
-import java.io.ByteArrayInputStream;
-import java.io.File;
-import java.io.IOException;
-import java.io.InputStream;
+import java.io.*;
+import java.net.URL;
+import java.net.URLConnection;
+import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -40,6 +42,8 @@ import static opendial.modules.mume.config.Config.TINT_CONFIG;
 public class CarPoolingInformationExtraction implements Module {
     //private static final String JSON_OUT = "." File.separator + "out.json";
     private static final String NONE = "None";
+    private static final String NOMINATIM_SEARCH_URL = "https://nominatim.openstreetmap.org/search.php?format=json&q=";
+    private static final int NOMINATIM_TIMEOUT = 1000;
 
     static {
         System.setProperty("log4j.configurationFile", LOG4J_CONFIG);
@@ -140,6 +144,10 @@ public class CarPoolingInformationExtraction implements Module {
             String startSlot = NONE;
             String endSlot = NONE;
             //String vehicleType = NONE;
+            double startLat = Double.MIN_VALUE;
+            double startLon = Double.MIN_VALUE;
+            double endLat = Double.MIN_VALUE;
+            double endLon = Double.MIN_VALUE;
 
             // 'Voglio prendere una macchina il 26 ottobre alle 14 da piazza Castello e voglio posarla alle sette del 29 ottobre a Volvera'
             log.info("User said: '" + userUtterance + "'");
@@ -260,6 +268,7 @@ public class CarPoolingInformationExtraction implements Module {
 //                log.info("Locations:");
 //                locTokens.forEach(t -> log.info(t.get(CoreAnnotations.TextAnnotation.class)));
 
+
                 List<CoreLabel> tokens = annotation.get(CoreAnnotations.TokensAnnotation.class);
                 List<CoreMap> sentences = annotation.get(CoreAnnotations.SentencesAnnotation.class);
                 // There is only one sentence: property 'ita_toksent.ssplitOnlyOnNewLine=true' in Tint's default-config.properties
@@ -362,6 +371,59 @@ public class CarPoolingInformationExtraction implements Module {
                         }
                     }
                 }
+                if (!startSlot.equals(NONE)) {
+                    try {
+                        URL startAddress = new URL(NOMINATIM_SEARCH_URL + URLEncoder.encode(startSlot, "UTF-8"));
+                        log.info(startAddress.toString());
+                        URLConnection geoConnection = startAddress.openConnection();
+                        BufferedReader in = new BufferedReader(
+                                new InputStreamReader(geoConnection.getInputStream(), StandardCharsets.UTF_8));
+                        String inputLine;
+                        StringBuilder a = new StringBuilder();
+                        while ((inputLine = in.readLine()) != null) {
+                            a.append(inputLine);
+                        }
+                        in.close();
+
+                        JsonParser parser = new JsonParser();
+                        JsonArray locations = (JsonArray) parser.parse(a.toString());
+                        if (locations.size() > 0) {
+                            startLat = Double.parseDouble(locations.get(0).getAsJsonObject().get("lat").getAsString());
+                            startLon = Double.parseDouble(locations.get(0).getAsJsonObject().get("lon").getAsString());
+                        }
+                    } catch (Exception e) {
+                        e.printStackTrace();
+                    }
+                }
+                try {
+                    Thread.sleep(NOMINATIM_TIMEOUT);
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                }
+                if (!endSlot.equals(NONE)) {
+                    try {
+                        URL endAddress = new URL(NOMINATIM_SEARCH_URL + URLEncoder.encode(endSlot, "UTF-8"));
+                        log.info(endAddress.toString());
+                        URLConnection geoConnection = endAddress.openConnection();
+                        BufferedReader in = new BufferedReader(
+                                new InputStreamReader(geoConnection.getInputStream(), StandardCharsets.UTF_8));
+                        String inputLine;
+                        StringBuilder a = new StringBuilder();
+                        while ((inputLine = in.readLine()) != null) {
+                            a.append(inputLine);
+                        }
+                        in.close();
+
+                        JsonParser parser = new JsonParser();
+                        JsonArray locations = (JsonArray) parser.parse(a.toString());
+                        if (locations.size() > 0) {
+                            endLat = Double.parseDouble(locations.get(0).getAsJsonObject().get("lat").getAsString());
+                            endLon = Double.parseDouble(locations.get(0).getAsJsonObject().get("lon").getAsString());
+                        }
+                    } catch (Exception e) {
+                        e.printStackTrace();
+                    }
+                }
             } catch (IOException exception) {
                 exception.printStackTrace();
             }
@@ -369,9 +431,13 @@ public class CarPoolingInformationExtraction implements Module {
             log.info("startDate = " + startDate);
             log.info("startTime = " + startTime);
             log.info("startSlot = " + startSlot);
+            log.info("\tstartLat = " + startLat);
+            log.info("\tstartLon = " + startLon);
             log.info("endDate = " + endDate);
             log.info("endTime = " + endTime);
             log.info("endSlot = " + endSlot);
+            log.info("\tendLat = " + endLat);
+            log.info("\tendLon = " + endLon);
 
             system.addContent("startDate", startDate);
             system.addContent("startTime", startTime);
