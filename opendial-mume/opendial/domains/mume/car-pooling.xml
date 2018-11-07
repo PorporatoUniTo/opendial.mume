@@ -33,26 +33,24 @@
                 - Cancel the current operation (CANCEL) -->
             <value>BOOKING</value>
         </variable>
-        <!--
         <variable id="startSlot">
-            <value>piazza Castello</value>
+            <value>None</value>
         </variable>
         <variable id="endSlot">
-            <value>Volvera</value>
+            <value>None</value>
         </variable>
         <variable id="startDate">
-            <value>25 Ottobre</value>
+            <value>None</value>
         </variable>
         <variable id="endDate">
-            <value>26 Ottobre</value>
+            <value>None</value>
         </variable>
         <variable id="startTime">
-            <value>14:00</value>
+            <value>None</value>
         </variable>
         <variable id="endTime">
-            <value>07:00</value>
+            <value>None</value>
         </variable>
-        -->
         <variable id="vehicleType">
             <value>economy</value>
         </variable>

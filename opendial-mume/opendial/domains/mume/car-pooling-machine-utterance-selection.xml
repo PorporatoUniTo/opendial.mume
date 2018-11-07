@@ -28,23 +28,92 @@
         </rule>
     </model>
 
-    <!-- TODO
     <model id="RetrieveInformation" trigger="a_m">
         <rule>
             <case>
                 <condition>
                     <if var="a_u" value="BOOKING"/>
                     <if var="state" value="INFORMATION_EXTRACTION"/>
-                    <if var="a_m" value="ASK_START_DATE"/>
+                    <if var="a_m" value="ASK_INFO_START_SLOT"/>
+                </condition>
+                <effect util="1">
+                    <set var="a_m-prev" value="{a_m}"/>
+                    <set var="u_m" value="Da dove vuoi partire?"/>
+                    <set var="a_m" value="RETRIEVE_INFORMATION"/>
+                </effect>
+            </case>
+        </rule>
+        <rule>
+            <case>
+                <condition>
+                    <if var="a_u" value="BOOKING"/>
+                    <if var="state" value="INFORMATION_EXTRACTION"/>
+                    <if var="a_m" value="ASK_INFO_END_SLOT"/>
+                </condition>
+                <effect util="1">
+                    <set var="a_m-prev" value="{a_m}"/>
+                    <set var="u_m" value="E dove vuoi andare?"/>
+                    <set var="a_m" value="RETRIEVE_INFORMATION"/>
+                </effect>
+            </case>
+        </rule>
+        <rule>
+            <case>
+                <condition>
+                    <if var="a_u" value="BOOKING"/>
+                    <if var="state" value="INFORMATION_EXTRACTION"/>
+                    <if var="a_m" value="ASK_INFO_START_DATE"/>
                 </condition>
                 <effect util="1">
                     <set var="a_m-prev" value="{a_m}"/>
                     <set var="u_m" value="Che giorno vuoi partire?"/>
+                    <set var="a_m" value="RETRIEVE_INFORMATION"/>
+                </effect>
+            </case>
+        </rule>
+        <rule>
+            <case>
+                <condition>
+                    <if var="a_u" value="BOOKING"/>
+                    <if var="state" value="INFORMATION_EXTRACTION"/>
+                    <if var="a_m" value="ASK_INFO_END_DATE"/>
+                </condition>
+                <effect util="1">
+                    <set var="a_m-prev" value="{a_m}"/>
+                    <set var="u_m" value="Che giorno vuoi posare l'auto?"/>
+                    <set var="a_m" value="RETRIEVE_INFORMATION"/>
+                </effect>
+            </case>
+        </rule>
+        <rule>
+            <case>
+                <condition>
+                    <if var="a_u" value="BOOKING"/>
+                    <if var="state" value="INFORMATION_EXTRACTION"/>
+                    <if var="a_m" value="ASK_INFO_START_TIME"/>
+                </condition>
+                <effect util="1">
+                    <set var="a_m-prev" value="{a_m}"/>
+                    <set var="u_m" value="A che ora vuoi partire?"/>
+                    <set var="a_m" value="RETRIEVE_INFORMATION"/>
+                </effect>
+            </case>
+        </rule>
+        <rule>
+            <case>
+                <condition>
+                    <if var="a_u" value="BOOKING"/>
+                    <if var="state" value="INFORMATION_EXTRACTION"/>
+                    <if var="a_m" value="ASK_INFO_END_TIME"/>
+                </condition>
+                <effect util="1">
+                    <set var="a_m-prev" value="{a_m}"/>
+                    <set var="u_m" value="Fino a che ora?"/>
+                    <set var="a_m" value="RETRIEVE_INFORMATION"/>
                 </effect>
             </case>
         </rule>
     </model>
-    -->
 
     <model id="AskConfirm" trigger="a_m">
         <rule>

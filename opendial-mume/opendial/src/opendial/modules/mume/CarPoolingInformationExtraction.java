@@ -8,7 +8,9 @@ import edu.stanford.nlp.ling.IndexedWord;
 import edu.stanford.nlp.pipeline.Annotation;
 import edu.stanford.nlp.semgraph.SemanticGraph;
 import edu.stanford.nlp.semgraph.SemanticGraphCoreAnnotations;
+import edu.stanford.nlp.trees.GrammaticalRelation;
 import edu.stanford.nlp.util.CoreMap;
+import edu.stanford.nlp.util.Pair;
 import eu.fbk.dh.tint.runner.TintPipeline;
 import opendial.DialogueState;
 import opendial.DialogueSystem;
@@ -22,9 +24,7 @@ import java.net.URL;
 import java.net.URLConnection;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.List;
+import java.util.*;
 import java.util.logging.Logger;
 
 import static opendial.modules.mume.config.Config.LOG4J_CONFIG;
@@ -46,6 +46,10 @@ public class CarPoolingInformationExtraction implements Module {
     private static final String NONE = "None";
     private static final String NOMINATIM_SEARCH_URL = "https://nominatim.openstreetmap.org/search.php?format=json&q=";
     private static final int NOMINATIM_TIMEOUT = 1000;
+
+    private static final Set<String> START_VERBS = new HashSet<>(Collections.singletonList("prendere"));
+    private static final Set<String> END_VERBS = new HashSet<>(Collections.singletonList("posare"));
+    private static final Set<String> START_CASES = new HashSet<>(Arrays.asList("da", "dalle", "dal"));
 
     static {
         System.setProperty("log4j.configurationFile", LOG4J_CONFIG);
@@ -134,29 +138,33 @@ public class CarPoolingInformationExtraction implements Module {
                 state.hasChanceNode("state") &&
                 state.queryProb("state").getBest().toString().equals("INFORMATION_EXTRACTION") &&
                 state.hasChanceNode("a_m") &&
-                (state.queryProb("a_m").getBest().toString().equals("RETRIEVE_INFORMATION") ||
-                        state.queryProb("a_m").getBest().toString().equals("ASK_START_DATE") ||
-                        state.queryProb("a_m").getBest().toString().equals("ASK_END_DATE") ||
-                        state.queryProb("a_m").getBest().toString().equals("ASK_START_TIME") ||
-                        state.queryProb("a_m").getBest().toString().equals("ASK_END_TIME") ||
-                        state.queryProb("a_m").getBest().toString().equals("ASK_START_SLOT") ||
-                        state.queryProb("a_m").getBest().toString().equals("ASK_END_SLOT")
-                        // state.queryProb("a_m").getBest().toString().equals("ASK_VEHICLE_TYPE")
-                )) {
+                state.queryProb("a_m").getBest().toString().equals("RETRIEVE_INFORMATION")) {
             String userUtterance = state.queryProb("u_u").getBest().toString();
 
             // Informations
-            String startDate = NONE;
-            String endDate = NONE;
-            String startTime = NONE;
-            String endTime = NONE;
-            String startSlot = NONE;
-            String endSlot = NONE;
-            //String vehicleType = NONE;
-            double startLat = Double.MIN_VALUE;
-            double startLon = Double.MIN_VALUE;
-            double endLat = Double.MIN_VALUE;
-            double endLon = Double.MIN_VALUE;
+            Map<String, String> information = new HashMap<>();
+            Map<String, String> backup = new HashMap<>();
+            String[] infoSlots = {
+                    "startDate",
+                    "endDate",
+                    "startTime",
+                    "endTime",
+                    "startSlot",
+                    "endSlot",
+                    "vehicleType",
+                    "startLat",
+                    "startLon",
+                    "endLat",
+                    "endLon"
+            };
+
+            Arrays.stream(infoSlots).forEach(slot -> {
+                if (state.hasChanceNode(slot))
+                    information.put(slot, state.queryProb(slot).getBest().toString());
+                else
+                    information.put(slot, "None");
+                backup.put(slot, information.get(slot));
+            });
 
             // 'Voglio prendere una macchina il 26 ottobre alle 14 da piazza Castello e voglio posarla alle sette del 29 ottobre a Volvera'
             log.info("User said: '" + userUtterance + "'");
@@ -199,7 +207,7 @@ public class CarPoolingInformationExtraction implements Module {
              * The TimexesAnnotation needed to access the TIMEX3 tags in the TintPipeline is not public:
              * the result of the annotation process is written on a JSON file and read from there
              */
-            //InputStream stream = new ByteArrayInputStream(userUtterance.getBytes(StandardCharsets.UTF_8));
+            // InputStream stream = new ByteArrayInputStream(userUtterance.getBytes(StandardCharsets.UTF_8));
 
             /*
             OutputStream jsonOut = null;
@@ -221,6 +229,10 @@ public class CarPoolingInformationExtraction implements Module {
             // annotation = pipeline.run(stream, System.out, TintRunner.OutputFormat.JSON);
             annotation = pipeline.runRaw(userUtterance);
 
+            String machinePrevState = "";
+            if (state.hasChanceNode("a_m-prev"))
+                machinePrevState = state.queryProb("a_m-prev").getBest().toString();
+
             /* See previous comment */
             // log.info("TIMEX3: " + String.valueOf(annotation.get(HeidelTimeAnnotations.TimexesAnnotation.class).size()));
 
@@ -228,74 +240,80 @@ public class CarPoolingInformationExtraction implements Module {
             //Gson gsonOut = new Gson();
             //LinkedTreeMap json = (LinkedTreeMap) gsonOut.fromJson(bufferedReader, Object.class);
 
-                /*
-                // TESTS
-                //log.info(json.toString());
-                //((ArrayList) json.get("timexes")).forEach(t -> log.info(((LinkedTreeMap) t).get("timexType").toString()));
-                log.info("Results:");
-                log.info("Text: " + annotation.get(CoreAnnotations.TextAnnotation.class));
-                log.info("Token's POS-tags:");
-                List<CoreLabel> tokens = annotation.get(CoreAnnotations.TokensAnnotation.class);
-                tokens.forEach(token -> log.info(token.get(CoreAnnotations.PartOfSpeechAnnotation.class)));
-                log.info("Sentences:");
-                List<CoreMap> sentences = annotation.get(CoreAnnotations.SentencesAnnotation.class);
-                sentences.forEach(sentence -> log.info(sentence.toShorterString()));
-                log.info("Dependencies:");
-                // There is only one sentence: property 'ita_toksent.ssplitOnlyOnNewLine=true' in Tint's default-config.properties
-                SemanticGraph dependencies = sentences.get(0).get(SemanticGraphCoreAnnotations.EnhancedPlusPlusDependenciesAnnotation.class);
-                dependencies.prettyPrint();
-                log.info("Root:");
-                dependencies.getRoots().forEach(root -> log.info(root.toString()));
-                log.info("Root's Children:");
-                dependencies.childPairs(dependencies.getFirstRoot()).forEach((p) -> {
-                    log.info(p.first.getShortName() +
-                            ((p.first.getSpecific() != null) ? "#" + p.first.getSpecific() : ""));
-                    log.info(String.valueOf(p.second.beginPosition()));
-                });
-                log.info("Root Split (just befor the root conjunction):");
-                List<IndexedWord> conjiunctionIndices = new ArrayList<>();
-                dependencies.childPairs(dependencies.getFirstRoot()).forEach((p) -> {
-                    if ((p.first.getShortName() + ":" + p.first.getSpecific()).equals("conj:e"))
-                        conjiunctionIndices.add(p.second);
-                });
-                conjiunctionIndices.forEach(c -> log.info(String.valueOf(c.beginPosition() - 1)));
-                List<CoreLabel> dateTokens = new ArrayList<>();
-                List<CoreLabel> timeTokens = new ArrayList<>();
-                List<CoreLabel> locTokens = new ArrayList<>();
-                tokens.forEach(t -> {
-                    switch (t.get(CoreAnnotations.NamedEntityTagAnnotation.class)) {
-                        case "DATE":
-                            dateTokens.add(t);
-                            break;
-                        case "TIME":
-                            timeTokens.add(t);
-                            break;
-                        case "LOC":
-                            locTokens.add(t);
-                            break;
-                        default:
-                    }
-                });
-                log.info("Dates:");
-                dateTokens.forEach(t -> log.info(t.get(CoreAnnotations.NormalizedNamedEntityTagAnnotation.class)));
-                log.info("Times:");
-                timeTokens.forEach(t -> log.info(t.get(CoreAnnotations.NormalizedNamedEntityTagAnnotation.class)));
-                log.info("Locations:");
-                locTokens.forEach(t -> log.info(t.get(CoreAnnotations.TextAnnotation.class)));
-                */
-
-
+            /*
+            // TESTS
+            //log.info(json.toString());
+            //((ArrayList) json.get("timexes")).forEach(t -> log.info(((LinkedTreeMap) t).get("timexType").toString()));
+            log.info("Results:");
+            log.info("Text: " + annotation.get(CoreAnnotations.TextAnnotation.class));
+            log.info("Token's POS-tags:");
             List<CoreLabel> tokens = annotation.get(CoreAnnotations.TokensAnnotation.class);
+            tokens.forEach(token -> log.info(token.get(CoreAnnotations.PartOfSpeechAnnotation.class)));
+            log.info("Sentences:");
             List<CoreMap> sentences = annotation.get(CoreAnnotations.SentencesAnnotation.class);
+            sentences.forEach(sentence -> log.info(sentence.toShorterString()));
+            log.info("Dependencies:");
             // There is only one sentence: property 'ita_toksent.ssplitOnlyOnNewLine=true' in Tint's default-config.properties
             SemanticGraph dependencies = sentences.get(0).get(SemanticGraphCoreAnnotations.EnhancedPlusPlusDependenciesAnnotation.class);
+            dependencies.prettyPrint();
+            log.info("Root:");
+            dependencies.getRoots().forEach(root -> log.info(root.toString()));
+            log.info("Roots' Children:");
+            dependencies.childPairs(dependencies.getFirstRoot()).forEach((p) -> {
+                log.info(p.first.getShortName() +
+                        ((p.first.getSpecific() != null) ? "#" + p.first.getSpecific() : ""));
+                log.info(String.valueOf(p.second.beginPosition()));
+            });
+            log.info("Root Split (just befor the root conjunction):");
             List<IndexedWord> conjiunctionIndices = new ArrayList<>();
             dependencies.childPairs(dependencies.getFirstRoot()).forEach((p) -> {
                 if ((p.first.getShortName() + ":" + p.first.getSpecific()).equals("conj:e"))
                     conjiunctionIndices.add(p.second);
             });
-            int split = conjiunctionIndices.get(0).beginPosition() - 1;
+            conjiunctionIndices.forEach(c -> log.info(String.valueOf(c.beginPosition() - 1)));
+            List<CoreLabel> dateTokens = new ArrayList<>();
+            List<CoreLabel> timeTokens = new ArrayList<>();
+            List<CoreLabel> locTokens = new ArrayList<>();
+            tokens.forEach(t -> {
+                switch (t.get(CoreAnnotations.NamedEntityTagAnnotation.class)) {
+                    case "DATE":
+                        dateTokens.add(t);
+                        break;
+                    case "TIME":
+                        timeTokens.add(t);
+                        break;
+                    case "LOC":
+                        locTokens.add(t);
+                        break;
+                    default:
+                }
+            });
+            log.info("Dates:");
+            dateTokens.forEach(t -> log.info(t.get(CoreAnnotations.NormalizedNamedEntityTagAnnotation.class)));
+            log.info("Times:");
+            timeTokens.forEach(t -> log.info(t.get(CoreAnnotations.NormalizedNamedEntityTagAnnotation.class)));
+            log.info("Locations:");
+            locTokens.forEach(t -> log.info(t.get(CoreAnnotations.TextAnnotation.class)));
+            */
+
+            List<CoreLabel> tokens = annotation.get(CoreAnnotations.TokensAnnotation.class);
+            List<CoreMap> sentences = annotation.get(CoreAnnotations.SentencesAnnotation.class);
+            // There is only one sentence: property 'ita_toksent.ssplitOnlyOnNewLine=true' in Tint's default-config.properties
+            SemanticGraph dependencies = sentences.get(0).get(SemanticGraphCoreAnnotations.EnhancedPlusPlusDependenciesAnnotation.class);
+
+            // dependencies.prettyPrint();
+
+            List<IndexedWord> conjiunctionIndices = new ArrayList<>();
+            dependencies.childPairs(dependencies.getFirstRoot()).forEach((p) -> {
+                if ((p.first.getShortName() + ":" + p.first.getSpecific()).equals("conj:e"))
+                    conjiunctionIndices.add(p.second);
+            });
+
+            int split = -1;
+            if (conjiunctionIndices.size() > 0)
+                split = conjiunctionIndices.get(0).beginPosition() - 1;
             boolean inNER = false;
+            CoreLabel currentNER = null;
             int currentNERStart = -1;
             String currentValue = "";
             String currentNERType = "O";
@@ -303,36 +321,11 @@ public class CarPoolingInformationExtraction implements Module {
             for (CoreLabel token : tokens) {
                 nerType = token.get(CoreAnnotations.NamedEntityTagAnnotation.class);
                 if (inNER && !nerType.equals(currentNERType)) {
-                    if (currentNERStart < split) {
-                        switch (currentNERType) {
-                            case "DATE":
-                                startDate = currentValue;
-                                break;
-                            case "TIME":
-                                startTime = currentValue.split("T")[1];
-                                break;
-                            case "LOC":
-                                startSlot = currentValue;
-                                break;
-                            default:
-                        }
-                    } else {
-                        switch (currentNERType) {
-                            case "DATE":
-                                endDate = currentValue;
-                                break;
-                            case "TIME":
-                                endTime = currentValue.split("T")[1];
-                                break;
-                            case "LOC":
-                                endSlot = currentValue;
-                                break;
-                            default:
-                        }
-                    }
+                    updateInfo(annotation, dependencies, currentNER, currentNERStart, currentNERType, currentValue, split, information, machinePrevState);
 
                     // Leaving the found NER: reset parameters
                     inNER = false;
+                    currentNER = null;
                     currentNERStart = -1;
                     currentValue = "";
                     currentNERType = "O";
@@ -340,6 +333,7 @@ public class CarPoolingInformationExtraction implements Module {
                 if (!nerType.equals("O") && !inNER) {
                     // Another NER encountered
                     inNER = true;
+                    currentNER = token;
                     currentNERStart = token.beginPosition();
                     currentNERType = nerType;
                     switch (nerType) {
@@ -359,47 +353,21 @@ public class CarPoolingInformationExtraction implements Module {
             // If the user utterance terminate with a NER, collect this information
             nerType = "O";
             if (inNER && !nerType.equals(currentNERType)) {
-                if (currentNERStart < split) {
-                    switch (currentNERType) {
-                        case "DATE":
-                            startDate = currentValue;
-                            break;
-                        case "TIME":
-                            startTime = currentValue.split("T")[1];
-                            break;
-                        case "LOC":
-                            startSlot = currentValue;
-                            break;
-                        default:
-                    }
-                } else {
-                    switch (currentNERType) {
-                        case "DATE":
-                            endDate = currentValue;
-                            break;
-                        case "TIME":
-                            endTime = currentValue.split("T")[1];
-                            break;
-                        case "LOC":
-                            endSlot = currentValue;
-                            break;
-                        default:
-                    }
-                }
+                updateInfo(annotation, dependencies, currentNER, currentNERStart, currentNERType, currentValue, split, information, machinePrevState);
             }
             JsonParser parser = new JsonParser();
             boolean waitBetweenRequests = false;
-            if (!startSlot.equals(NONE)) {
-                String nominatimResponse = getNominatimJSON(startSlot);
+            if (!information.getOrDefault("startSlot", NONE).equals(NONE)) {
+                String nominatimResponse = getNominatimJSON(information.get("startSlot"));
 
                 JsonArray locations = (JsonArray) parser.parse(nominatimResponse);
                 if (locations.size() > 0) {
-                    startLat = Double.parseDouble(locations.get(0).getAsJsonObject().get("lat").getAsString());
-                    startLon = Double.parseDouble(locations.get(0).getAsJsonObject().get("lon").getAsString());
+                    information.put("startLat", locations.get(0).getAsJsonObject().get("lat").getAsString());
+                    information.put("startLon", locations.get(0).getAsJsonObject().get("lon").getAsString());
                 }
                 waitBetweenRequests = true;
             }
-            if (!endSlot.equals(NONE)) {
+            if (!information.getOrDefault("endSlot", NONE).equals(NONE)) {
                 if (waitBetweenRequests) {
                     try {
                         Thread.sleep(NOMINATIM_TIMEOUT);
@@ -407,35 +375,28 @@ public class CarPoolingInformationExtraction implements Module {
                         e.printStackTrace();
                     }
                 }
-                String nominatimResponse = getNominatimJSON(endSlot);
+                String nominatimResponse = getNominatimJSON(information.get("endSlot"));
 
                 JsonArray locations = (JsonArray) parser.parse(nominatimResponse);
                 if (locations.size() > 0) {
-                    endLat = Double.parseDouble(locations.get(0).getAsJsonObject().get("lat").getAsString());
-                    endLon = Double.parseDouble(locations.get(0).getAsJsonObject().get("lon").getAsString());
+                    information.put("endLat", locations.get(0).getAsJsonObject().get("lat").getAsString());
+                    information.put("endLon", locations.get(0).getAsJsonObject().get("lon").getAsString());
                 }
             }
             // } catch (IOException exception) {
             //     exception.printStackTrace();
             // }
 
-            log.info("startDate = " + startDate);
-            log.info("startTime = " + startTime);
-            log.info("startSlot = " + startSlot);
-            log.info("\tstartLat = " + startLat);
-            log.info("\tstartLon = " + startLon);
-            log.info("endDate = " + endDate);
-            log.info("endTime = " + endTime);
-            log.info("endSlot = " + endSlot);
-            log.info("\tendLat = " + endLat);
-            log.info("\tendLon = " + endLon);
+            boolean hasBeenUpdated = false;
+            for (Map.Entry<String, String> info : information.entrySet())
+                if (information.get(info.getKey()).equals(backup.get(info.getKey())))
+                    hasBeenUpdated = true;
 
-            system.addContent("startDate", startDate);
-            system.addContent("startTime", startTime);
-            system.addContent("startSlot", startSlot);
-            system.addContent("endDate", endDate);
-            system.addContent("endTime", endTime);
-            system.addContent("endSlot", endSlot);
+            information.forEach((s, v) -> {
+                log.info(s + " = " + v);
+                system.addContent(s, v);
+            });
+            system.addContent("update", String.valueOf(hasBeenUpdated));
         }
     }
 
@@ -459,6 +420,12 @@ public class CarPoolingInformationExtraction implements Module {
         return !paused;
     }
 
+    /**
+     * Execute the geocoding for the found location via -Nominatim.
+     *
+     * @param location the String with the location name
+     * @return the JSON Object with the location innformation
+     */
     private String getNominatimJSON(String location) {
         StringBuilder a = new StringBuilder();
         try {
@@ -476,5 +443,102 @@ public class CarPoolingInformationExtraction implements Module {
             exception.printStackTrace();
         }
         return a.toString();
+    }
+
+    /**
+     * @param annotation
+     * @param dependencies
+     * @param currentNERToken
+     * @param currentNERStart
+     * @param currentNERType
+     * @param currentValue
+     * @param split
+     * @param information
+     */
+    private void updateInfo(Annotation annotation,
+                            SemanticGraph dependencies,
+                            CoreLabel currentNERToken,
+                            int currentNERStart,
+                            String currentNERType,
+                            String currentValue,
+                            int split,
+                            Map<String, String> information,
+                            String machinePrevState) {
+        IndexedWord tokenIndexedWord = dependencies.getNodeByIndex(currentNERToken.index());
+
+        String verbGovernorLemma = "";
+        List<IndexedWord> currentParents = dependencies.getPathToRoot(tokenIndexedWord);
+        Iterator<IndexedWord> it = currentParents.iterator();
+        while (verbGovernorLemma.isEmpty() && it.hasNext()) {
+            CoreLabel currentParentToken = annotation.get(CoreAnnotations.TokensAnnotation.class).get(it.next().index() - 1);
+            if (currentParentToken.get(CoreAnnotations.PartOfSpeechAnnotation.class)
+                    .startsWith("V"))
+                verbGovernorLemma = currentParentToken.lemma();
+        }
+
+        String tokenCase = "";
+        for (Pair<GrammaticalRelation, IndexedWord> p : dependencies.childPairs(tokenIndexedWord)) {
+            if (p.first.getShortName().equals("case"))
+                tokenCase = p.second.lemma();
+        }
+
+        if (split >= 0 && currentNERStart < split ||
+                !verbGovernorLemma.isEmpty() && START_VERBS.contains(verbGovernorLemma) ||
+                !tokenCase.isEmpty() && START_CASES.contains(tokenCase)) {
+            switch (currentNERType) {
+                case "DATE":
+                    information.put("startDate", currentValue);
+                    break;
+                case "TIME":
+                    information.put("startTime", currentValue.split("T")[1]);
+                    break;
+                case "LOC":
+                    information.put("startSlot", currentValue);
+                    break;
+                default:
+            }
+        } else if (split >= 0 && currentNERStart >= split ||
+                !verbGovernorLemma.isEmpty() && END_VERBS.contains(verbGovernorLemma)) {
+            switch (currentNERType) {
+                case "DATE":
+                    information.put("endDate", currentValue);
+                    break;
+                case "TIME":
+                    information.put("endTime", currentValue.split("T")[1]);
+                    break;
+                case "LOC":
+                    information.put("endSlot", currentValue);
+                    break;
+                default:
+            }
+        } else if (machinePrevState.startsWith("ASK_INFO")) {
+            switch (machinePrevState) {
+                case "ASK_INFO_START_SLOT":
+                    if (currentNERType.equals("LOC"))
+                        information.put("startSlot", currentValue);
+                    break;
+                case "ASK_INFO_END_SLOT":
+                    if (currentNERType.equals("LOC"))
+                        information.put("endSlot", currentValue);
+                    break;
+                case "ASK_INFO_START_DATE":
+                    if (currentNERType.equals("DATE"))
+                        information.put("startDate", currentValue);
+                    break;
+                case "ASK_INFO_END_DATE":
+                    if (currentNERType.equals("DATE"))
+                        information.put("endDate", currentValue);
+                    break;
+                case "ASK_INFO_START_TIME":
+                    if (currentNERType.equals("TIME"))
+                        information.put("startTime", currentValue.split("T")[1]);
+                    break;
+                case "ASK_INFO_END_TIME":
+                    if (currentNERType.equals("TIME"))
+                        information.put("endTime", currentValue.split("T")[1]);
+                    break;
+                default:
+            }
+        }
     }
 }
