@@ -1,0 +1,81 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<domain>
+    <initialstate>
+
+        <!-- Starting prompt -->
+        <variable id="u_m">
+            <value>Benvenuti nel sistema di prenotazione automatico di MuMe!</value>
+        </variable>
+
+        <variable id="StartSlot">
+            <value>Missing</value>
+        </variable>
+        <variable id="StartCity">
+            <value>Missing</value>
+        </variable>
+        <variable id="MaybeStartCity">
+            <value>Missing</value>
+        </variable>
+        <variable id="StartTime">
+            <value>Missing</value>
+        </variable>
+        <variable id="EndSlot">
+            <value>Missing</value>
+        </variable>
+        <variable id="EndCity">
+            <value>Missing</value>
+        </variable>
+        <variable id="EndTimeKnown">
+            <value>Missing</value>
+        </variable>
+        <variable id="EndTime">
+            <value>Missing</value>
+        </variable>
+        <variable id="StopsKnown">
+            <value>Missing</value>
+        </variable>
+        <variable id="Stops">
+            <value>[]</value>
+        </variable>
+
+        <variable id="yes">
+            <value>[sì, si, esatto, certo, ok, giusto, vero, verissimo, certissimo]</value>
+        </variable>
+        <variable id="no">
+            <value>[no, sbagliato, sbagliatissimo, falso]</value>
+        </variable>
+
+        <!-- We start the dialogue by asking for the start slot -->
+        <variable id="current_step">
+            <value>ASK_START_SLOT</value>
+            <!-- <value>ASK_START_CITY_CONFIRM</value> -->
+            <!-- <value>ASK_START_TIME</value> -->
+            <!-- <value>ASK_END_SLOT</value> -->
+            <!-- <value>ASK_END_SLOT_MORE</value> -->
+            <!-- <value>SLOT_ERROR_UPDATE</value> -->
+            <!-- <value>ASK_END_TIME</value> -->
+            <!-- <value>ASK_END_TIME_MORE</value> -->
+            <!-- <value>ASK_STOPS</value> -->
+            <!-- <value>ASK_STOPS_MORE</value> -->
+            <!-- <value>FINAL_CONFIRM</value> -->
+            <!-- <value>SEND_REQUEST</value> -->
+            <!-- <value>OUTCOME_COMMUNICATION</value> -->
+        </variable>
+
+    </initialstate>
+
+    <!--  Dialogue management models (action selection and transition) -->
+    <import href="car-pooling-user-driven-machine-state-update.xml"/>
+
+    <!-- Natural language generation models -->
+    <import href="car-pooling-user-driven-machine-utterance-selection.xml"/>
+
+
+    <!-- External module showing how to interface the dialogue system with an external
+    database (used here to find the ticket prices and "book" the tickets) -->
+    <settings>
+        <modules>
+            opendial.modules.mumeuserdriven.CarPoolingInformationExtraction,opendial.modules.mumeuserdriven.CarPoolingRequest
+        </modules>
+    </settings>
+</domain>

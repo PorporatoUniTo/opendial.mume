@@ -2,7 +2,7 @@
 <domain id="MachineUtterance">
 
     <model id="OutcomeElaboration" trigger="a_m">
-        <rule>
+        <rule id="OutputComunication">
             <case>
                 <condition>
                     <if var="a_u" value="BOOKING"/>
@@ -22,7 +22,7 @@
                     <if var="requestResult" value="Failure"/>
                 </condition>
                 <effect util="10">
-                    <set var="u_m" value="La tua richiesta non e' stata accettata."/>
+                    <set var="u_m" value="Spiacente, la tua richiesta non e' stata accettata."/>
                 </effect>
             </case>
         </rule>
@@ -36,7 +36,7 @@
                     <if var="state" value="INFORMATION_EXTRACTION"/>
                     <if var="a_m" value="ASK_INFO_START_SLOT"/>
                 </condition>
-                <effect util="1">
+                <effect util="6">
                     <set var="a_m-prev" value="{a_m}"/>
                     <set var="u_m" value="Da dove vuoi partire?"/>
                     <set var="a_m" value="RETRIEVE_INFORMATION"/>
@@ -48,11 +48,11 @@
                 <condition>
                     <if var="a_u" value="BOOKING"/>
                     <if var="state" value="INFORMATION_EXTRACTION"/>
-                    <if var="a_m" value="ASK_INFO_END_SLOT"/>
+                    <if var="a_m" value="ASK_START_CITY"/>
                 </condition>
-                <effect util="1">
+                <effect util="5">
                     <set var="a_m-prev" value="{a_m}"/>
-                    <set var="u_m" value="E dove vuoi andare?"/>
+                    <set var="u_m" value="Da che città vorresti partire?"/>
                     <set var="a_m" value="RETRIEVE_INFORMATION"/>
                 </effect>
             </case>
@@ -64,13 +64,14 @@
                     <if var="state" value="INFORMATION_EXTRACTION"/>
                     <if var="a_m" value="ASK_INFO_START_DATE"/>
                 </condition>
-                <effect util="1">
+                <effect util="4">
                     <set var="a_m-prev" value="{a_m}"/>
                     <set var="u_m" value="Che giorno vuoi partire?"/>
                     <set var="a_m" value="RETRIEVE_INFORMATION"/>
                 </effect>
             </case>
         </rule>
+        <!--
         <rule>
             <case>
                 <condition>
@@ -78,13 +79,14 @@
                     <if var="state" value="INFORMATION_EXTRACTION"/>
                     <if var="a_m" value="ASK_INFO_END_DATE"/>
                 </condition>
-                <effect util="1">
+                <effect util="3">
                     <set var="a_m-prev" value="{a_m}"/>
                     <set var="u_m" value="Che giorno vuoi posare l'auto?"/>
                     <set var="a_m" value="RETRIEVE_INFORMATION"/>
                 </effect>
             </case>
         </rule>
+        -->
         <rule>
             <case>
                 <condition>
@@ -92,13 +94,14 @@
                     <if var="state" value="INFORMATION_EXTRACTION"/>
                     <if var="a_m" value="ASK_INFO_START_TIME"/>
                 </condition>
-                <effect util="1">
+                <effect util="2">
                     <set var="a_m-prev" value="{a_m}"/>
                     <set var="u_m" value="A che ora vuoi partire?"/>
                     <set var="a_m" value="RETRIEVE_INFORMATION"/>
                 </effect>
             </case>
         </rule>
+        <!--
         <rule>
             <case>
                 <condition>
@@ -113,6 +116,7 @@
                 </effect>
             </case>
         </rule>
+        -->
     </model>
 
     <model id="AskConfirm" trigger="a_m">
@@ -127,8 +131,8 @@
                 </condition>
                 <effect util="10">
                     <set var="u_m" value="Ricapitolando: vuoi partire il {startDate} alle {startTime}
-                        da {startSlot} con un veicolo {vehicleType} e posarlo il {endDate} alle {endTime}
-                         a {endSlot}. Giusto?"/>
+                        da {cityIndexedWords}, {startSlot} con un veicolo {vehicleType} e posarlo il {endDate} alle {endTime}
+                         a {endSlot}, {endCity}. Giusto?"/>
                     <set var="a_m" value="WAIT_CONFIRM"/>
                 </effect>
             </case>

@@ -62,6 +62,23 @@ class LocationsExtractor {
     }
 
     /**
+     * Extract the city from an address
+     */
+    private void getCityFromAddress(List<IndexedWord> address, List<LocationInfo> addresses, List<LocationInfo> cities, List<CoreLabel> tokens, SemanticGraph dependencies) {
+        for (String city : CITIES) {
+            String[] cityWords = city.split(" ");
+            int i = 0;
+            while (i < address.size() && i < cityWords.length &&
+                    address.get(address.size() - i - 1).originalText().equals(cityWords[cityWords.length - i - 1])) {
+                i++;
+            }
+            if (i > 0)
+                cities.add(new LocationInfo(address.subList(address.size() - i, address.size()), tokens, dependencies));
+            addresses.add(new LocationInfo(address.subList(0, address.size() - i), tokens, dependencies));
+        }
+    }
+
+    /**
      * Separates cities' NERs from addresses' NERs.
      *
      * @param locationNERs the Lis<List<IndexedWord>> of NERs found in the (corrected) user utterance
@@ -73,8 +90,9 @@ class LocationsExtractor {
             String locationText = location.stream().map(IndexedWord::originalText).collect(Collectors.joining(" "));
             if (CITIES.stream().map(String::toLowerCase).collect(Collectors.toList()).contains(locationText.toLowerCase()))
                 cities.add(new LocationInfo(location, tokens, dependencies));
-            else
+            else {
                 addresses.add(new LocationInfo(location, tokens, dependencies));
+            }
         }
     }
 
@@ -269,7 +287,8 @@ class LocationsExtractor {
                 information.put("endCity", newEndCity.getLocation());
             if (newStartSlot != null)
                 information.put("startSlot", newStartSlot.getLocation());
-            information.put("endSlot", newEndSlot.getLocation());
+            if (newEndSlot != null)
+                information.put("endSlot", newEndSlot.getLocation());
 
             JsonParser parser = new JsonParser();
             boolean waitBetweenRequests = false;

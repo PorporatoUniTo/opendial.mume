@@ -30,29 +30,36 @@
         <variable id="a_u">
             <!-- The user can:
                 - Book a vehicle (BOOKING)
-                - Cancel the current operation (CANCEL) -->
+                - Ask for a ride (ASK_RIDE) LATER -->
             <value>BOOKING</value>
         </variable>
-        <variable id="startSlot">
-            <value>None</value>
-        </variable>
-        <variable id="endSlot">
-            <value>None</value>
+        <variable id="cityIndexedWords">
+            <value>Missing</value>
         </variable>
         <variable id="startDate">
-            <value>None</value>
-        </variable>
-        <variable id="endDate">
-            <value>None</value>
+            <value>Missing</value>
         </variable>
         <variable id="startTime">
-            <value>None</value>
+            <value>Missing</value>
+        </variable>
+
+        <variable id="endDate">
+            <value>Missing</value>
+        </variable>
+        <variable id="startSlot">
+            <value>Missing</value>
+        </variable>
+        <variable id="endCity">
+            <value>Missing</value>
+        </variable>
+        <variable id="endSlot">
+            <value>Missing</value>
         </variable>
         <variable id="endTime">
-            <value>None</value>
+            <value>Missing</value>
         </variable>
         <variable id="vehicleType">
-            <value>economy</value>
+            <value>Missing</value>
         </variable>
 
         <!--
