@@ -241,7 +241,7 @@ class LocationsExtractor {
                         city.isEnd = true;
                     }
                 }
-                /* TIMES */
+                /* SLOTS */
                 for (LocationInfo slot : addresses) {
                     if (newStartSlot == null && START_VERBS.contains(slot.getFirstVerbGovernorLemma())) {
                         newStartSlot = slot;
@@ -273,7 +273,7 @@ class LocationsExtractor {
                 newEndSlot = addresses.get(0);
 
 
-            /* INFER slor and/or city from the information extracted */
+            /* INFER slot and/or city from the information extracted */
 
             log.info("Final Start Date: " + newStartCity);
             log.info("Final End Date: " + newEndCity);

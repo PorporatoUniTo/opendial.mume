@@ -13,7 +13,13 @@
         <variable id="StartCity">
             <value>Missing</value>
         </variable>
-        <variable id="MaybeStartCity">
+        <variable id="StartLat">
+            <value>Missing</value>
+        </variable>
+        <variable id="StartLon">
+            <value>Missing</value>
+        </variable>
+        <variable id="StartDate">
             <value>Missing</value>
         </variable>
         <variable id="StartTime">
@@ -25,7 +31,16 @@
         <variable id="EndCity">
             <value>Missing</value>
         </variable>
+        <variable id="EndLat">
+            <value>Missing</value>
+        </variable>
+        <variable id="EndLon">
+            <value>Missing</value>
+        </variable>
         <variable id="EndTimeKnown">
+            <value>Missing</value>
+        </variable>
+        <variable id="EndDate">
             <value>Missing</value>
         </variable>
         <variable id="EndTime">
@@ -37,16 +52,16 @@
         <variable id="Stops">
             <value>[]</value>
         </variable>
-
-        <variable id="yes">
-            <value>[sì, si, esatto, certo, ok, giusto, vero, verissimo, certissimo]</value>
-        </variable>
-        <variable id="no">
-            <value>[no, sbagliato, sbagliatissimo, falso]</value>
+        <variable id="NewInformation">
+            <value>[]</value>
         </variable>
 
-        <!-- We start the dialogue by asking for the start slot -->
         <variable id="current_step">
+            <value>INFORMATION_RETRIEVAL</value>
+            <!-- <value>REQUEST_PROCESSING</value> -->
+        </variable>
+        <!-- We start the dialogue by asking for the start slot -->
+        <variable id="a_m">
             <value>ASK_START_SLOT</value>
             <!-- <value>ASK_START_CITY_CONFIRM</value> -->
             <!-- <value>ASK_START_TIME</value> -->
@@ -64,15 +79,15 @@
 
     </initialstate>
 
-    <!--  Dialogue management models (action selection and transition) -->
+
+    <!--  Dialogue management models (action selection and state transitions) -->
     <import href="car-pooling-user-driven-machine-state-update.xml"/>
 
     <!-- Natural language generation models -->
     <import href="car-pooling-user-driven-machine-utterance-selection.xml"/>
 
 
-    <!-- External module showing how to interface the dialogue system with an external
-    database (used here to find the ticket prices and "book" the tickets) -->
+    <!-- External modules -->
     <settings>
         <modules>
             opendial.modules.mumeuserdriven.CarPoolingInformationExtraction,opendial.modules.mumeuserdriven.CarPoolingRequest

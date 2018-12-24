@@ -517,10 +517,16 @@ public class CarPoolingInformationExtraction implements Module {
              * If the system asked for a time information, the answer shuold (?) contain a preposition such as "alle"
              *   (e.g., "A che ora vorresti partire? Alle sette")
              */
+            int timeMaybe = -1;
+            try {
+                timeMaybe = Integer.parseInt(correctedUtterance.trim());
+            } catch (NumberFormatException exception) {
+            }
             if (!(correctedUtterance.contains("Alle") || correctedUtterance.contains("alle") ||
                     correctedUtterance.contains("Dalle") || correctedUtterance.contains("dalle") ||
-                    correctedUtterance.contains("Le") || correctedUtterance.contains("le")))    // The others are explicitated for clarity, this is more general
-                correctedUtterance = "Alle " + correctedUtterance;
+                    correctedUtterance.contains("Le") || correctedUtterance.contains("le")) ||    // The others are explicitated for clarity, this is more general
+                    timeMaybe > -1)
+                correctedUtterance = "Alle " + correctedUtterance.trim();
             else if (correctedUtterance.startsWith("le"))
                 correctedUtterance = "Al" + correctedUtterance;
             else if (correctedUtterance.startsWith("Le"))

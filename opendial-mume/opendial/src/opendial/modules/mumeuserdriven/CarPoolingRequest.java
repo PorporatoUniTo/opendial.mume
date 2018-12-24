@@ -61,7 +61,11 @@ public class CarPoolingRequest implements Module {
         if (updatedVars.contains("current_step") &&
                 state.hasChanceNode("current_step") &&
                 // If the new state of the machine is the "make request" state
-                state.queryProb("current_step").getBest().toString().equals("SEND_REQUEST")) {
+                state.queryProb("current_step").getBest().toString().equals("REQUEST_PROCESSING") &&
+                updatedVars.contains("a_m") &&
+                state.hasChanceNode("a_m") &&
+                // If the new state of the machine is the "make request" state
+                state.queryProb("a_m").getBest().toString().equals("SEND_REQUEST")) {
             String result;
             double rnd = Math.random();
             log.info("Request result: " + rnd);
@@ -72,9 +76,9 @@ public class CarPoolingRequest implements Module {
                 result = "Failure";
                 log.info("\t ==>\t Failure");
             }
-            system.addContent("RequestResult", result);
 
-            system.addContent("current_step", "OUTCOME_COMMUNICATION");
+            system.addContent("a_m", "OUTCOME_COMMUNICATION");
+            system.addContent("RequestResult", result);
         }
 
     }
