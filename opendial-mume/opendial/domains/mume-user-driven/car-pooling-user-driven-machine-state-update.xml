@@ -266,7 +266,7 @@
 
                     <!-- Go on -->
                     <set var="NewInformation" value="[]"/>
-                    <set var="a_m" value="ASK_STOPS"/>
+                    <set var="a_m" value="ASK_VEHICLE_TYPE"/>
                 </effect>
             </case>
             <case>
@@ -285,7 +285,22 @@
                     <set var="EndDate" value="{D}"/>
 
                     <set var="NewInformation" value="[]"/>
-                    <set var="a_m" value="ASK_STOPS"/>
+                    <set var="a_m" value="ASK_VEHICLE_TYPE"/>
+                </effect>
+            </case>
+            <case>
+                <!--The user keeps telling nonsense instead of the start time -->
+                <condition>
+                    <if var="current_step" value="INFORMATION_RETRIEVAL"/>
+                    <if var="a_m" value="ASK_END_TIME"/>
+                    <if var="NewInformation" relation="contains" value="UU"/>
+
+                    <if var="NewInformation" relation="contains" value="Answer(true)"/>
+                    <if var="NewInformation" relation="!contains" value="Time(*)"/>
+                </condition>
+                <effect>
+                    <set var="NewInformation" value="[]"/>
+                    <set var="a_m" value="ASK_END_TIME_MORE"/>
                 </effect>
             </case>
             <case>
@@ -295,7 +310,6 @@
                     <if var="a_m" value="ASK_END_TIME_MORE"/>
                     <if var="NewInformation" relation="contains" value="UU"/>
 
-                    <if var="NewInformation" relation="contains" value="Answer(true)"/>
                     <if var="NewInformation" relation="!contains" value="Time(*)"/>
                 </condition>
                 <effect>
@@ -317,6 +331,86 @@
                 <effect>
                     <set var="NewInformation" value="[]"/>
                     <set var="a_m" value="ASK_END_TIME"/>
+                </effect>
+            </case>
+        </rule>
+
+        <rule id="VehicleType">
+            <case>
+                <!-- The user is fine with using a base economic car model -->
+                <condition>
+                    <if var="current_step" value="INFORMATION_RETRIEVAL"/>
+                    <if var="a_m" value="ASK_VEHICLE_TYPE"/>
+                    <if var="NewInformation" relation="contains" value="UU"/>
+
+                    <!-- Question: "Va bene un'auto economica?" -->
+                    <if var="NewInformation" relation="contains" value="Answer(true)"/>
+                </condition>
+                <effect>
+                    <set var="VehicleType" value="economy"/>
+
+                    <set var="NewInformation" value="[]"/>
+                    <set var="a_m" value="ASK_STOPS"/>
+                </effect>
+            </case>
+            <case>
+                <!-- The user communicated a vehicle type -->
+                <condition>
+                    <if var="current_step" value="INFORMATION_RETRIEVAL"/>
+                    <if var="a_m" relation="in" value="[ASK_VEHICLE_TYPE,ASK_VEHICLE_TYPE_MORE]"/>
+                    <if var="NewInformation" relation="contains" value="UU"/>
+
+                    <if var="NewInformation" relation="contains" value="VehicleType({VT})"/>
+                </condition>
+                <effect>
+                    <set var="VehicleType" value="{VT}"/>
+
+                    <set var="NewInformation" value="[]"/>
+                    <set var="a_m" value="ASK_STOPS"/>
+                </effect>
+            </case>
+            <case>
+                <!-- The user said he want another type of vehicle but didn't say what kind -->
+                <condition>
+                    <if var="current_step" value="INFORMATION_RETRIEVAL"/>
+                    <if var="a_m" value="ASK_VEHICLE_TYPE"/>
+                    <if var="NewInformation" relation="contains" value="UU"/>
+
+                    <if var="NewInformation" relation="contains" value="Answer(false)"/>
+                    <if var="NewInformation" relation="!contains" value="VehicleType(*)"/>
+                </condition>
+                <effect>
+                    <set var="NewInformation" value="[]"/>
+                    <set var="a_m" value="ASK_VEHICLE_TYPE_MORE"/>
+                </effect>
+            </case>
+            <case>
+                <!-- The user said he want another type of vehicle but didn't say what kind -->
+                <condition>
+                    <if var="current_step" value="INFORMATION_RETRIEVAL"/>
+                    <if var="a_m" value="ASK_VEHICLE_TYPE_MORE"/>
+                    <if var="NewInformation" relation="contains" value="UU"/>
+
+                    <if var="NewInformation" relation="!contains" value="VehicleType(*)"/>
+                </condition>
+                <effect>
+                    <set var="NewInformation" value="[]"/>
+                    <set var="a_m" value="ASK_VEHICLE_TYPE_MORE"/>
+                </effect>
+            </case>
+            <case>
+                <!-- The user didn't say anyhting useful -->
+                <condition>
+                    <if var="current_step" value="INFORMATION_RETRIEVAL"/>
+                    <if var="a_m" value="ASK_VEHICLE_TYPE"/>
+                    <if var="NewInformation" relation="contains" value="UU"/>
+
+                    <if var="NewInformation" relation="!contains" value="Answer(*)"/>
+                    <if var="NewInformation" relation="!contains" value="VehicleType(*)"/>
+                </condition>
+                <effect>
+                    <set var="NewInformation" value="[]"/>
+                    <set var="a_m" value="ASK_VEHICLE_TYPE"/>
                 </effect>
             </case>
         </rule>
@@ -435,6 +529,7 @@
                     <set var="EndTimeKnown" value="Missing"/>
                     <set var="EndDate" value="Missing"/>
                     <set var="EndTime" value="Missing"/>
+                    <set var="VehicleType" value="Missing"/>
                     <set var="StopsKnown" value="Missing"/>
                     <set var="Stops" value="Missing"/>
 

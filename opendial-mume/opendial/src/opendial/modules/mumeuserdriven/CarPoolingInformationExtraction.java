@@ -306,9 +306,10 @@ public class CarPoolingInformationExtraction implements Module {
 
             List<List<IndexedWord>> cities = new ArrayList<>();
             List<List<IndexedWord>> addresses = new ArrayList<>();
+
             partitionLocation(locationAnnotations, cities, addresses, tokens, dependencies);
 
-
+            List<String> processedVehicleTypeAnnotation = new ArrayList<>();
             List<String> processedLocationAnnotations = new ArrayList<>();
             List<String> processedTimeAnnotations = new ArrayList<>();
 
@@ -399,10 +400,18 @@ public class CarPoolingInformationExtraction implements Module {
                 }
             }
 
+            if (machineIntent.contains("VEHICLE_TYPE")) {
+                for (Map.Entry<String, List<String>> vehicleTypeExpressions : VEHICLE_TYPES.entrySet())
+                    for (String expression : vehicleTypeExpressions.getValue())
+                        if (annotation.get(CoreAnnotations.TextAnnotation.class).contains(expression))
+                            processedVehicleTypeAnnotation.add("VehicleType(" + vehicleTypeExpressions.getKey() + ")");
+            }
+
 
             StringJoiner j = new StringJoiner(", ", "[", "]");
             processedLocationAnnotations.forEach(j::add);
             processedTimeAnnotations.forEach(j::add);
+            processedVehicleTypeAnnotation.forEach(j::add);
             if (checkForNegativeAnswer(tokens))
                 j.add("Answer(false)");
             else if (checkForPositiveAnswer(tokens))

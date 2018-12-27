@@ -87,7 +87,31 @@
             </case>
         </rule>
 
-        <!-- Asks for more information about intermediate stops -->
+        <!-- Asks for vehicle type -->
+        <rule>
+            <case>
+                <condition>
+                    <if var="a_m" value="ASK_VEHICLE_TYPE"/>
+                </condition>
+                <effect>
+                    <set var="u_m" value="Va bene un'auto economica?"/>
+                </effect>
+            </case>
+        </rule>
+
+        <!-- Asks for vehicle type -->
+        <rule>
+            <case>
+                <condition>
+                    <if var="a_m" value="ASK_VEHICLE_TYPE_MORE"/>
+                </condition>
+                <effect>
+                    <set var="u_m" value="Che tipo di veicolo ti serve?"/>
+                </effect>
+            </case>
+        </rule>
+
+        <!-- Asks for intermediate stops -->
         <rule>
             <case>
                 <condition>

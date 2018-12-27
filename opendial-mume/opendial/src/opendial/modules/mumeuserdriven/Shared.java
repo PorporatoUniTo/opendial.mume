@@ -8,6 +8,7 @@ public class Shared {
 
     // Nominatim
     public static final String NOMINATIM_SEARCH_URL = "https://nominatim.openstreetmap.org/search.php?format=json&q=";
+    /*
     public static final int NOMINATIM_TIMEOUT = 1000;
 
     public static final Set<String> STRONG_START_CITY_CASE = new HashSet<>(Arrays.asList("da"));   // "da Pinerolo"
@@ -35,6 +36,7 @@ public class Shared {
 
     public static final Set<String> START_VERBS = new HashSet<>(Arrays.asList("partire", "prendere", "prenotare", "usare"));
     public static final Set<String> END_VERBS = new HashSet<>(Arrays.asList("arrivare", "lasciare", "posare"));
+    */
 
     private static final Set<String> PUNCT = new HashSet<>(Arrays.asList("", ".", " ", ",", ":", ";", "?", "!"));
     private static final Set<String> POSITIVE_WORDS = new HashSet<>(Arrays.asList("sì", "si", "certo", "certissimo", "ok", "giusto", "giustissimo", "vero", "verissimo"));
@@ -42,8 +44,13 @@ public class Shared {
 
     static {
         for (String w : POSITIVE_WORDS)
-            for (String p : PUNCT)
-                positiveAnswers.add(w + p);
+            for (boolean b : Arrays.asList(false, true)) {
+                String word = w;
+                if (b)
+                    word = w.substring(0, 1).toUpperCase() + w.substring(1);
+                for (String p : PUNCT)
+                    positiveAnswers.add(word + p);
+            }
     }
 
     private static final Set<String> NEGATIVE_WORDS = new HashSet<>(Arrays.asList("no", "sbagliato", "sbagliatissimo", "falso"));
@@ -51,8 +58,13 @@ public class Shared {
 
     static {
         for (String w : NEGATIVE_WORDS)
-            for (String p : PUNCT)
-                negativeAnswers.add(w + p);
+            for (boolean b : Arrays.asList(false, true)) {
+                String word = w;
+                if (b)
+                    word = w.substring(0, 1).toUpperCase() + w.substring(1);
+                for (String p : PUNCT)
+                    negativeAnswers.add(w + p);
+            }
     }
 
 

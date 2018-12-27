@@ -49,6 +49,9 @@
         <variable id="StopsKnown">
             <value>Missing</value>
         </variable>
+        <variable id="VehicleType">
+            <value>Missing</value>
+        </variable>
         <variable id="Stops">
             <value>[]</value>
         </variable>
@@ -70,6 +73,8 @@
             <!-- <value>SLOT_ERROR_UPDATE</value> -->
             <!-- <value>ASK_END_TIME</value> -->
             <!-- <value>ASK_END_TIME_MORE</value> -->
+            <!-- <value>ASK_VEHICLE_TYPE</value> -->
+            <!-- <value>ASK_VEHICLE_TYPE_MORE</value> -->
             <!-- <value>ASK_STOPS</value> -->
             <!-- <value>ASK_STOPS_MORE</value> -->
             <!-- <value>FINAL_CONFIRM</value> -->
