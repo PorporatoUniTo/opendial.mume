@@ -37,6 +37,18 @@
             </case>
         </rule>
 
+        <!-- Asks for the start time again -->
+        <rule>
+            <case>
+                <condition>
+                    <if var="a_m" value="ASK_START_TIME_MORE"/>
+                </condition>
+                <effect>
+                    <set var="u_m" value="Quando vuoi partire?"/>
+                </effect>
+            </case>
+        </rule>
+
         <!-- Asks for information about end slot -->
         <rule>
             <case>
@@ -82,7 +94,7 @@
                     <if var="a_m" value="ASK_END_TIME_MORE"/>
                 </condition>
                 <effect>
-                    <set var="u_m" value="A che ora?"/>
+                    <set var="u_m" value="A che ora vuoi lasciare il veicolo?"/>
                 </effect>
             </case>
         </rule>

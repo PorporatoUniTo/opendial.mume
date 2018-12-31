@@ -119,7 +119,7 @@
                 <!--The system has to check if the itime is a suitable one -->
                 <condition>
                     <if var="current_step" value="INFORMATION_RETRIEVAL"/>
-                    <if var="a_m" value="ASK_START_TIME"/>
+                    <if var="a_m" relation="in" value="[ASK_START_TIME,ASK_START_TIME_MORE]"/>
                     <if var="NewInformation" relation="contains" value="UU"/>
 
                     <if var="NewInformation" relation="contains" value="Time({T})"/>
@@ -138,14 +138,14 @@
                 <!--If the user didn't comunicate a start time, keep asking -->
                 <condition>
                     <if var="current_step" value="INFORMATION_RETRIEVAL"/>
-                    <if var="a_m" value="ASK_START_TIME"/>
+                    <if var="a_m" value="[ASK_START_TIME,ASK_START_TIME_MORE]"/>
                     <if var="NewInformation" relation="contains" value="UU"/>
 
                     <if var="NewInformation" relation="!contains" value="Time(*)"/>
                 </condition>
                 <effect>
                     <set var="NewInformation" value="[]"/>
-                    <set var="a_m" value="ASK_START_TIME"/>
+                    <set var="a_m" value="ASK_START_TIME_MORE"/>
                 </effect>
             </case>
         </rule>

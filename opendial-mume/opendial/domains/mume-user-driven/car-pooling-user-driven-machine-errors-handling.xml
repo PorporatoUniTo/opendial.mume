@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<domain id="UserErrorsHandling">
+    <model id="ErrorCases" trigger="NewInformation">
+        <rule id="PastDateGiven">
+            <case>
+                <condition>
+                    <if var="current_step" value="INFORMATION_RETRIEVAL"/>
+                    <if var="a_m" relation="in" value="[ASK_START_TIME,ASK_START_TIME_MORE]"/>
+                    <if var="NewInformation" relation="contains" value="UE"/>
+
+                    <if var="NewInformation" relation="contains" value="Error(PastTimeError)"/>
+                </condition>
+                <effect>
+                    <set var="u_m" value="Mi spiace, data e ora non possono essere gia' passate..."/>
+
+                    <set var="NewInformation" value="[]"/>
+                    <set var="a_m" value="ASK_START_TIME_MORE"/>
+                </effect>
+            </case>
+
+            <case>
+                <condition>
+                    <if var="current_step" value="INFORMATION_RETRIEVAL"/>
+                    <if var="a_m" relation="in" value="[ASK_END_TIME,ASK_END_TIME_MORE]"/>
+                    <if var="NewInformation" relation="contains" value="UE"/>
+
+                    <!-- TODO: check startDate consistency -->
+                    <if var="NewInformation" relation="contains" value="Error(PastTimeError)"/>
+                </condition>
+                <effect>
+                    <set var="u_m" value="Mi spiace, data e ora non possono essere gia' passate..."/>
+
+                    <set var="NewInformation" value="[]"/>
+                    <set var="a_m" value="ASK_END_TIME_MORE"/>
+                </effect>
+            </case>
+        </rule>
+    </model>
+</domain>

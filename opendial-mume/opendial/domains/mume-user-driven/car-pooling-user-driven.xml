@@ -89,6 +89,9 @@
     <import href="car-pooling-user-driven-machine-state-update.xml"/>
 
     <!-- Natural language generation models -->
+    <import href="car-pooling-user-driven-machine-errors-handling.xml"/>
+
+    <!-- Natural language generation models -->
     <import href="car-pooling-user-driven-machine-utterance-selection.xml"/>
 
 

@@ -39,7 +39,7 @@ public class Shared {
     */
 
     private static final Set<String> PUNCT = new HashSet<>(Arrays.asList("", ".", " ", ",", ":", ";", "?", "!"));
-    private static final Set<String> POSITIVE_WORDS = new HashSet<>(Arrays.asList("sì", "si", "certo", "certissimo", "ok", "giusto", "giustissimo", "vero", "verissimo"));
+    private static final Set<String> POSITIVE_WORDS = new HashSet<>(Arrays.asList("sì", "si", "certo", "certissimo", "ok", "giusto", "giustissimo", "vero", "verissimo", "corretto"));
     public static Set<String> positiveAnswers = new HashSet<>();
 
     static {
@@ -53,7 +53,7 @@ public class Shared {
             }
     }
 
-    private static final Set<String> NEGATIVE_WORDS = new HashSet<>(Arrays.asList("no", "sbagliato", "sbagliatissimo", "falso"));
+    private static final Set<String> NEGATIVE_WORDS = new HashSet<>(Arrays.asList("no", "sbagliato", "sbagliatissimo", "falso", "scorretto"));
     public static Set<String> negativeAnswers = new HashSet<>();
 
     static {

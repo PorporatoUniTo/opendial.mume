@@ -312,6 +312,7 @@ public class CarPoolingInformationExtraction implements Module {
             List<String> processedVehicleTypeAnnotation = new ArrayList<>();
             List<String> processedLocationAnnotations = new ArrayList<>();
             List<String> processedTimeAnnotations = new ArrayList<>();
+            List<String> errors = new ArrayList<>();
 
             if (machineIntent.contains("SLOT") || machineIntent.contains("CITY")) {
                 if (addresses.size() == 1) {
@@ -376,6 +377,7 @@ public class CarPoolingInformationExtraction implements Module {
                 });
             }
 
+            ZonedDateTime now = ZonedDateTime.now();
             if (machineIntent.contains("TIME")) {
                 if (timeAnnotations.size() == 1) {
                     String date = "";
@@ -385,11 +387,13 @@ public class CarPoolingInformationExtraction implements Module {
                             date = currentDate;
                     }
                     if (date.isEmpty()) {
-                        ZonedDateTime now = ZonedDateTime.now();
-                        date = now.getYear() + "-" +
-                                ((now.getMonthValue() < 10) ? "0" + now.getMonthValue() : now.getMonthValue()) + "-" +
-                                ((now.getDayOfMonth() < 10) ? "0" + now.getDayOfMonth() : now.getDayOfMonth());
-
+                        if (machineIntent.contains("END") && state.hasChanceNode("StartDate")) {
+                            date = state.queryProb("StartDate").getBest().toString();
+                        } else {
+                            date = now.getYear() + "-" +
+                                    ((now.getMonthValue() < 10) ? "0" + now.getMonthValue() : now.getMonthValue()) + "-" +
+                                    ((now.getDayOfMonth() < 10) ? "0" + now.getDayOfMonth() : now.getDayOfMonth());
+                        }
                     }
 
                     processedTimeAnnotations.add("Time(" + timeAnnotations.get(0).get(0).get(CoreAnnotations.NormalizedNamedEntityTagAnnotation.class).split("T")[1]
@@ -408,6 +412,33 @@ public class CarPoolingInformationExtraction implements Module {
             }
 
 
+            /* ERRORS DETECTION */
+            if (processedTimeAnnotations.size() > 0 &&
+                    machineIntent.contains("TIME")) {
+                String[] newDate = processedTimeAnnotations.stream().filter(d -> d.startsWith("Date")).findFirst().orElse("Date()")
+                        .replace("Date(", "").replace(")", "").split("-");
+                String[] newTime = processedTimeAnnotations.stream().filter(d -> d.startsWith("Time")).findFirst().orElse("Time()")
+                        .replace("Time(", "").replace(")", "").split("-");
+                if (
+                    // the year is a past year, or...
+                        Integer.parseInt(newDate[0]) < now.getYear() ||
+                                // the month is a past month, or...
+                                Integer.parseInt(newDate[0]) == now.getYear() &&
+                                        Integer.parseInt(newDate[1]) < now.getMonthValue() ||
+                                // the month is a past day, or...
+                                Integer.parseInt(newDate[0]) == now.getYear() &&
+                                        Integer.parseInt(newDate[1]) == now.getMonthValue() &&
+                                        Integer.parseInt(newDate[2]) < now.getDayOfMonth() ||
+                                // the month is a past hour, or...
+                                Integer.parseInt(newDate[0]) == now.getYear() &&
+                                        Integer.parseInt(newDate[1]) == now.getMonthValue() &&
+                                        Integer.parseInt(newDate[2]) == now.getDayOfMonth() &&
+                                        Integer.parseInt(newTime[0]) < now.getHour()) {
+                    errors.add("Error(" + "PastTimeError" + ")");
+                }
+            }
+
+
             StringJoiner j = new StringJoiner(", ", "[", "]");
             processedLocationAnnotations.forEach(j::add);
             processedTimeAnnotations.forEach(j::add);
@@ -416,8 +447,14 @@ public class CarPoolingInformationExtraction implements Module {
                 j.add("Answer(false)");
             else if (checkForPositiveAnswer(tokens))
                 j.add("Answer(true)");
+
+            errors.forEach(j::add);
+
             /* Aknowledge the fact that the user as spoken! */
-            j.add("UU");
+            if (errors.isEmpty())
+                j.add("UU");
+            else
+                j.add("UE");
             String newInformation = j.toString();
             log.info(newInformation);
 
@@ -426,6 +463,8 @@ public class CarPoolingInformationExtraction implements Module {
     }
 
     /**
+     * Recognise the presence of a positive answer (e.g.: 'yes').
+     *
      * @param tokens
      * @return
      */
@@ -437,6 +476,8 @@ public class CarPoolingInformationExtraction implements Module {
     }
 
     /**
+     * Recognise the presence of a negative answer (e.g.: 'no').
+     *
      * @param tokens
      * @return
      */
