@@ -15,9 +15,11 @@ public class Shared {
     public static final Set<String> STRONG_END_CITY_CASE = new HashSet<>(Arrays.asList("fino"));    // "fino a Nichelino"
     // A -> "da Nichelino a Pinerolo" => "Voglio andare da piazza Vittorio Veneto A Pinerolo a Nichelino"
     public static final Set<String> DEPENDANT_CITY_CASE = new HashSet<>(Arrays.asList("a", "di"));  // "voglio partire da piazza Avis a Pinerolo", "voglio partire da via Morante di Nichelino"
+    public static final Set<String> WEAK_START_CITY_CASE = new HashSet<>(Arrays.asList("di"));  // "voglio una delle macchine di Nichelino"
     public static final Set<String> WEAK_END_CITY_CASE = new HashSet<>(Arrays.asList("a")); // "da Pinerolo a Nichelino"
 
     public static final Set<String> STRONG_START_SLOT_CASE = new HashSet<>(Arrays.asList("da"));  // "da piazza Vittorio Veneto"
+    public static final Set<String> WEAK_START_SLOT_CASE = new HashSet<>(Arrays.asList("in"));  // "in piazza Avis"
     public static final Set<String> STRONG_END_SLOT_CASE = new HashSet<>(Arrays.asList("a")); // "a piazza Vittorio Veneto"
     public static final Set<String> DEPENDANT_SLOT_CASE = new HashSet<>(Arrays.asList("in"));   // "voglio partire da Pinerolo in piazza Avis", "Voglio arrivare A nichino in viale Segre"
 
@@ -33,8 +35,8 @@ public class Shared {
     // ALLE -> "dalle _ alle 18" => "Prendero' l'auto ALLE 8"
     public static final Set<String> DEPENDANT_TIME_CASE = new HashSet<>(Arrays.asList("alle", "le"));    // "fino a domani alle 17", "entro le 14 di dopodomani"
 
-    public static final Set<String> START_VERBS = new HashSet<>(Arrays.asList("partire", "prendere", "prenotare", "usare"));
-    public static final Set<String> END_VERBS = new HashSet<>(Arrays.asList("arrivare", "lasciare", "posare"));
+    public static final Set<String> START_VERBS = new HashSet<>(Arrays.asList("iniziare", "partire", "prendere", "prenotare", "usare"));
+    public static final Set<String> END_VERBS = new HashSet<>(Arrays.asList("arrivare", "lasciare", "posare", "raggiungere", "giungere", "andare"));
 
     /* Sample citis */
     public static final Set<String> CITIES = new HashSet<>(Arrays.asList("Pinerolo", "Nichelino"));

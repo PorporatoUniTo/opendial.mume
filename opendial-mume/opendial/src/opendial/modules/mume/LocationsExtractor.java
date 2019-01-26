@@ -141,7 +141,7 @@ class LocationsExtractor {
                     LocationInfo previousStartSlot = newStartSlot;
                     LocationInfo previousEndSlot = newEndSlot;
 
-                    /* SEARCH FOR UNAMBIGUOUS TEMPORAL EXPRESSIONS (those that are unequivocally about the start or the end of the journey) */
+                    /* SEARCH FOR UNAMBIGUOUS LOCATION EXPRESSIONS (those that are unequivocally about the start or the end of the journey) */
                     /* CITIES */
                     for (LocationInfo city : cities) {
                         if (city.getCaseType() != null) {
@@ -177,25 +177,32 @@ class LocationsExtractor {
                     /* SEARCH FOR AMBIGUOUS TEMPORAL EXPRESSION (those which role dependes on other information in the sentence) */
                     /* CITIES */
                     for (LocationInfo city : cities) {
-                        /* "... da Pinerolo... a Nichelino..." */
-                        if (newEndCity == null && WEAK_END_CITY_CASE.contains(city.getCaseType()) &&
-                                newStartCity != null && STRONG_START_DATE_CASE.contains(newStartCity.getCaseType())) {
-                            newEndCity = city;
-                            city.isEnd = true;
-                        } else if (DEPENDANT_CITY_CASE.contains(city.getCaseType())) {
-                            /* "... da Pinerolo Olimpica a Pinerolo..." */
-                            if (newStartCity == null &&
-                                    newStartSlot != null && newStartSlot.isGovernorOf(city)) {
-                                newStartCity = city;
-                                city.isStart = true;
-                            }
-                            /* "... a viale Segre a Nichelino..." */
-                            if (newEndCity == null &&
-                                    newEndSlot != null && newEndSlot.isGovernorOf(city)) {
+                        if (newStartCity == null)
+
+                            /* "... da Pinerolo... a Nichelino..." */
+                            if (newEndCity == null && WEAK_END_CITY_CASE.contains(city.getCaseType()) &&
+                                    newStartCity != null && STRONG_START_CITY_CASE.contains(newStartCity.getCaseType())) {
                                 newEndCity = city;
                                 city.isEnd = true;
                             }
-                        }
+                            /* "Voglio andare a Nichelino [domani]." */
+                            else if (newEndCity == null && WEAK_END_CITY_CASE.contains(city.getCaseType()) && cities.size() == 1) {
+                                newEndCity = city;
+                                city.isEnd = true;
+                            } else if (DEPENDANT_CITY_CASE.contains(city.getCaseType())) {
+                                /* "... da Pinerolo Olimpica a Pinerolo..." */
+                                if (newStartCity == null &&
+                                        newStartSlot != null && newStartSlot.isGovernorOf(city)) {
+                                    newStartCity = city;
+                                    city.isStart = true;
+                                }
+                                /* "... a viale Segre a Nichelino..." */
+                                if (newEndCity == null &&
+                                        newEndSlot != null && newEndSlot.isGovernorOf(city)) {
+                                    newEndCity = city;
+                                    city.isEnd = true;
+                                }
+                            }
                     }
 
                     /* SLOTS */
@@ -207,7 +214,7 @@ class LocationsExtractor {
                                 newStartSlot = slot;
                                 slot.isStart = true;
                             }
-                            /* "... fino a dopodomani alle 9..." */
+                            /* "... fino a Nichelino in via del Castello..." */
                             if (newEndSlot == null &&
                                     newEndCity != null && newEndCity.isGovernorOf(slot)) {
                                 newEndCity = slot;
@@ -240,6 +247,14 @@ class LocationsExtractor {
                         newEndCity = city;
                         city.isEnd = true;
                     }
+                    /* Ho bisogno di una macchina di Nichelino */
+                    if (newStartCity == null &&
+                            WEAK_START_CITY_CASE.contains(city.getCaseType()) &&
+                            !START_VERBS.contains(city.getFirstVerbGovernorLemma()) &&
+                            !END_VERBS.contains(city.getFirstVerbGovernorLemma())) {
+                        newStartCity = city;
+                        city.isStart = true;
+                    }
                 }
                 /* SLOTS */
                 for (LocationInfo slot : addresses) {
@@ -249,6 +264,14 @@ class LocationsExtractor {
                     } else if (newEndSlot == null && END_VERBS.contains(slot.getFirstVerbGovernorLemma())) {
                         newEndSlot = slot;
                         slot.isEnd = true;
+                    }
+                    /* Voglio la macchina in piazza Avis */
+                    if (newStartSlot == null &&
+                            WEAK_START_SLOT_CASE.contains(slot.getCaseType()) &&
+                            !START_VERBS.contains(slot.getFirstVerbGovernorLemma()) &&
+                            !END_VERBS.contains(slot.getFirstVerbGovernorLemma())) {
+                        newStartSlot = slot;
+                        slot.isStart = true;
                     }
                 }
 
@@ -262,34 +285,51 @@ class LocationsExtractor {
 
 
             /* Check if the user is answering to targetted questions */
-            /* Not updating indexes, but it doesn't matter */
-            if (cities.size() == 1 && newStartCity == null && machinePrevState.endsWith("START_DATE"))
+            /* Not updating SemanticGraph indexes, but it doesn't matter */
+            if (cities.size() == 1 && newStartCity == null && machinePrevState.endsWith("START_CITY"))
                 newStartCity = cities.get(0);
-            else if (cities.size() == 1 && newEndCity == null && machinePrevState.endsWith("END_DATE"))
+            else if (cities.size() == 1 && newEndCity == null && machinePrevState.endsWith("END_CITY"))
                 newEndCity = cities.get(0);
-            else if (addresses.size() == 1 && newStartSlot == null && machinePrevState.endsWith("START_TIME"))
+            else if (addresses.size() == 1 && newStartSlot == null && machinePrevState.endsWith("START_SLOT"))
                 newStartSlot = addresses.get(0);
-            else if (addresses.size() == 1 && newEndSlot == null && machinePrevState.endsWith("END_TIME"))
+            else if (addresses.size() == 1 && newEndSlot == null && machinePrevState.endsWith("END_SLOT"))
                 newEndSlot = addresses.get(0);
 
 
+            log.info("Final Start City: " + newStartCity);
+            log.info("Final End City: " + newEndCity);
+            log.info("Final Start Slot: " + newStartSlot);
+            log.info("Final End Slot: " + newEndSlot);
+
+
             /* INFER slot and/or city from the information extracted */
+            /* FIXME check with the user */
+            if (newStartSlot != null)
+                information.put("startSlot", newStartSlot.getLocation());
+            else if (newStartSlot == null && newStartCity != null)
+                information.put("startSlot", CITIES_ADDRESSES.get(newStartCity.getLocation()).get(0));
 
-            log.info("Final Start Date: " + newStartCity);
-            log.info("Final End Date: " + newEndCity);
-            log.info("Final Start Time: " + newStartSlot);
-            log.info("Final End Time: " + newEndSlot);
-
+            if (newEndSlot != null)
+                information.put("endSlot", newEndSlot.getLocation());
+            else if (newEndSlot == null && newEndCity != null)
+                information.put("endSlot", CITIES_ADDRESSES.get(newEndCity.getLocation()).get(0));
 
             if (newStartCity != null)
                 information.put("startCity", newStartCity.getLocation());
+            else if (newStartCity == null && newStartSlot != null)
+                for (Map.Entry<String, List<String>> cityAddresses : CITIES_ADDRESSES.entrySet())
+                    if (cityAddresses.getValue().contains(newStartSlot.getLocation()))
+                        information.put("startCity", cityAddresses.getKey());
+
             if (newEndCity != null)
                 information.put("endCity", newEndCity.getLocation());
-            if (newStartSlot != null)
-                information.put("startSlot", newStartSlot.getLocation());
-            if (newEndSlot != null)
-                information.put("endSlot", newEndSlot.getLocation());
+            else if (newEndCity == null && newEndSlot != null)
+                for (Map.Entry<String, List<String>> cityAddresses : CITIES_ADDRESSES.entrySet())
+                    if (cityAddresses.getValue().contains(newEndSlot.getLocation()))
+                        information.put("endCity", cityAddresses.getKey());
 
+
+            // Geocoding
             JsonParser parser = new JsonParser();
             boolean waitBetweenRequests = false;
             if (!information.get("startCity").equals(NONE) && !information.get("startSlot").equals(NONE) &&

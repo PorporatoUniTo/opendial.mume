@@ -1,0 +1,189 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<domain id="MachineUtterances">
+    <model id="Questions" trigger="a_m">
+        <!-- Asks for start slot -->
+        <rule>
+            <case>
+                <condition>
+                    <if var="a_m" value="ASK_START_SLOT"/>
+                </condition>
+                <effect>
+                    <set var="u_m" value="Da dove vuoi partire?"/>
+                </effect>
+            </case>
+        </rule>
+
+        <!-- Given the slot, asks confirm for the city (homonimies avoidance) -->
+        <rule>
+            <case>
+                <condition>
+                    <if var="a_m" value="ASK_START_CITY_CONFIRM"/>
+                </condition>
+                <effect>
+                    <set var="u_m" value="Di {StartCity}?"/>
+                </effect>
+            </case>
+        </rule>
+
+        <!-- Asks for the start time -->
+        <rule>
+            <case>
+                <condition>
+                    <if var="a_m" value="ASK_START_TIME"/>
+                </condition>
+                <effect>
+                    <set var="u_m" value="Quando?"/>
+                </effect>
+            </case>
+        </rule>
+
+        <!-- Asks for the start time again -->
+        <rule>
+            <case>
+                <condition>
+                    <if var="a_m" value="ASK_START_TIME_MORE"/>
+                </condition>
+                <effect>
+                    <set var="u_m" value="Quando vuoi partire?"/>
+                </effect>
+            </case>
+        </rule>
+
+        <!-- Asks for information about end slot -->
+        <rule>
+            <case>
+                <condition>
+                    <if var="a_m" value="ASK_END_SLOT"/>
+                </condition>
+                <effect>
+                    <set var="u_m"
+                         value="Vuoi tornare da dove sei partito?"/>
+                </effect>
+            </case>
+        </rule>
+
+        <!-- If needed, asks for more information about the end slot -->
+        <rule>
+            <case>
+                <condition>
+                    <if var="a_m" value="ASK_END_SLOT_MORE"/>
+                </condition>
+                <effect>
+                    <set var="u_m" value="E dove vuoi lasciare l'auto?"/>
+                </effect>
+            </case>
+        </rule>
+
+        <!-- Asks for the return time -->
+        <rule>
+            <case>
+                <condition>
+                    <if var="a_m" value="ASK_END_TIME"/>
+                </condition>
+                <effect>
+                    <set var="u_m"
+                         value="Sai a che ora poserai l'auto?"/>
+                </effect>
+            </case>
+        </rule>
+
+        <!-- If needed, asks for more information about the end time -->
+        <rule>
+            <case>
+                <condition>
+                    <if var="a_m" value="ASK_END_TIME_MORE"/>
+                </condition>
+                <effect>
+                    <set var="u_m" value="A che ora vuoi lasciare il veicolo?"/>
+                </effect>
+            </case>
+        </rule>
+
+        <!-- Asks for vehicle type -->
+        <rule>
+            <case>
+                <condition>
+                    <if var="a_m" value="ASK_VEHICLE_TYPE"/>
+                </condition>
+                <effect>
+                    <set var="u_m" value="Va bene un'auto economica?"/>
+                </effect>
+            </case>
+        </rule>
+
+        <!-- Asks for vehicle type -->
+        <rule>
+            <case>
+                <condition>
+                    <if var="a_m" value="ASK_VEHICLE_TYPE_MORE"/>
+                </condition>
+                <effect>
+                    <set var="u_m" value="Che tipo di veicolo ti serve?"/>
+                </effect>
+            </case>
+        </rule>
+
+        <!-- Asks for intermediate stops -->
+        <rule>
+            <case>
+                <condition>
+                    <if var="a_m" value="ASK_STOPS"/>
+                </condition>
+                <effect>
+                    <set var="u_m" value="Vuoi indicare delle tappe intermedie?"/>
+                </effect>
+            </case>
+        </rule>
+
+        <!-- If needed, asks for more information about intermediate stops -->
+        <rule>
+            <case>
+                <condition>
+                    <if var="a_m" value="ASK_STOPS_MORE"/>
+                </condition>
+                <effect>
+                    <set var="u_m" value="Quali?"/>
+                </effect>
+            </case>
+        </rule>
+
+        <!--  -->
+        <rule>
+            <case>
+                <condition>
+                    <if var="a_m" value="FINAL_CONFIRM"/>
+                </condition>
+                <effect>
+                    <set var="u_m" value="Corretto?"/>
+                </effect>
+            </case>
+        </rule>
+    </model>
+
+    <model id="OutcomeProcessing" trigger="RequestResult">
+        <rule>
+            <case>
+                <condition>
+                    <if var="current_step" value="REQUEST_PROCESSING"/>
+                    <if var="a_m" value="OUTCOME_COMMUNICATION"/>
+                    <if var="RequestResult" value="Success"/>
+                </condition>
+                <effect>
+                    <set var="u_m" value="La tua richiesta e' stata accettata. Buon viaggio!"/>
+                </effect>
+            </case>
+
+            <case>
+                <condition>
+                    <if var="current_step" value="REQUEST_PROCESSING"/>
+                    <if var="a_m" value="OUTCOME_COMMUNICATION"/>
+                    <if var="RequestResult" value="Failure"/>
+                </condition>
+                <effect>
+                    <set var="u_m" value="La tua richiesta non e' stata accettata."/>
+                </effect>
+            </case>
+        </rule>
+    </model>
+
+</domain>

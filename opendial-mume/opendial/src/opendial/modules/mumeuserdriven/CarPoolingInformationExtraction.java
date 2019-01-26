@@ -396,7 +396,35 @@ public class CarPoolingInformationExtraction implements Module {
                         }
                     }
 
-                    processedTimeAnnotations.add("Time(" + timeAnnotations.get(0).get(0).get(CoreAnnotations.NormalizedNamedEntityTagAnnotation.class).split("T")[1]
+                    // FIXME check time corrections
+                    // TODO add recap to the confirmation question
+                    String time;
+                    // TODO check the methodology: minutes in letters are a problem?
+                    boolean timeInLetters = !timeAnnotations.get(0).stream().map(IndexedWord::originalText).collect(Collectors.joining(" ")).matches("[^\\d]*\\d+[^\\d]*");
+
+                    log.info("Time in letters:\t" + String.valueOf(timeInLetters));
+
+                    String[] newTimeFields = timeAnnotations.get(0).get(0).get(CoreAnnotations.NormalizedNamedEntityTagAnnotation.class).split("T")[1].split(":");
+                    if (machineIntent.contains("START")) {
+                        time = (Integer.parseInt(newTimeFields[0]) +
+                                // TODO add check for time in letter
+                                ((timeInLetters &&
+                                        Integer.parseInt(date.split("-")[2]) == now.getDayOfMonth() &&
+                                        Integer.parseInt(newTimeFields[0]) < now.getHour()) ? 12 : 0)
+                        ) + ":" + newTimeFields[1];
+                    } else if (machineIntent.contains("END") &&
+                            state.hasChanceNode("StartTime")) {
+                        String startHour = state.queryProb("StartTime").getBest().toString().split("-")[0];
+                        time = (Integer.parseInt(newTimeFields[0]) +
+                                // TODO add check for time in letter
+                                ((timeInLetters && Integer.parseInt(newTimeFields[0]) <= Integer.parseInt(startHour)) ? 12 : 0)
+                        ) + ":" + newTimeFields[1];
+                    } // Superfluos, just for Java variable initialization's policy
+                    else
+                        time = newTimeFields[0] + ":" + newTimeFields[1];
+
+
+                    processedTimeAnnotations.add("Time(" + time
                             /* Avoids characters problems */
                             .replace(':', '-') +
                             ")");
@@ -425,15 +453,17 @@ public class CarPoolingInformationExtraction implements Module {
                                 // the month is a past month, or...
                                 Integer.parseInt(newDate[0]) == now.getYear() &&
                                         Integer.parseInt(newDate[1]) < now.getMonthValue() ||
-                                // the month is a past day, or...
+                                // the day is a past day, or...
                                 Integer.parseInt(newDate[0]) == now.getYear() &&
                                         Integer.parseInt(newDate[1]) == now.getMonthValue() &&
                                         Integer.parseInt(newDate[2]) < now.getDayOfMonth() ||
-                                // the month is a past hour, or...
+                                // the time is a past time, or...
                                 Integer.parseInt(newDate[0]) == now.getYear() &&
                                         Integer.parseInt(newDate[1]) == now.getMonthValue() &&
                                         Integer.parseInt(newDate[2]) == now.getDayOfMonth() &&
-                                        Integer.parseInt(newTime[0]) < now.getHour()) {
+                                        Integer.parseInt(newTime[0]) < now.getHour() ||
+                                // the hour is invalid (greater than 23 or less than 0, due to the correction taking in account the start time)
+                                Integer.parseInt(newTime[0]) > 23 || Integer.parseInt(newTime[0]) < 0) {
                     errors.add("Error(" + "PastTimeError" + ")");
                 }
             }
