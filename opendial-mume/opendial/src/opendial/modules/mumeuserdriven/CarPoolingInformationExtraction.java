@@ -402,12 +402,11 @@ public class CarPoolingInformationExtraction implements Module {
                     // TODO check the methodology: minutes in letters are a problem?
                     boolean timeInLetters = !timeAnnotations.get(0).stream().map(IndexedWord::originalText).collect(Collectors.joining(" ")).matches("[^\\d]*\\d+[^\\d]*");
 
-                    log.info("Time in letters:\t" + String.valueOf(timeInLetters));
+                    log.info("Time in letters:\t" + timeInLetters);
 
                     String[] newTimeFields = timeAnnotations.get(0).get(0).get(CoreAnnotations.NormalizedNamedEntityTagAnnotation.class).split("T")[1].split(":");
                     if (machineIntent.contains("START")) {
                         time = (Integer.parseInt(newTimeFields[0]) +
-                                // TODO add check for time in letter
                                 ((timeInLetters &&
                                         Integer.parseInt(date.split("-")[2]) == now.getDayOfMonth() &&
                                         Integer.parseInt(newTimeFields[0]) < now.getHour()) ? 12 : 0)
@@ -416,7 +415,6 @@ public class CarPoolingInformationExtraction implements Module {
                             state.hasChanceNode("StartTime")) {
                         String startHour = state.queryProb("StartTime").getBest().toString().split("-")[0];
                         time = (Integer.parseInt(newTimeFields[0]) +
-                                // TODO add check for time in letter
                                 ((timeInLetters && Integer.parseInt(newTimeFields[0]) <= Integer.parseInt(startHour)) ? 12 : 0)
                         ) + ":" + newTimeFields[1];
                     } // Superfluos, just for Java variable initialization's policy

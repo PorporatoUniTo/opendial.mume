@@ -35,6 +35,9 @@ public class Shared {
     // ALLE -> "dalle _ alle 18" => "Prendero' l'auto ALLE 8"
     public static final Set<String> DEPENDANT_TIME_CASE = new HashSet<>(Arrays.asList("alle", "le"));    // "fino a domani alle 17", "entro le 14 di dopodomani"
 
+    public static final Set<String> TIME_PLUS_MODIFIERS = new HashSet<>(Arrays.asList("di sera", "di pomeriggio"));  // "... fino alle sette di sera"
+    public static final Set<String> TIME_MINUS_MODIFIERS = new HashSet<>(Arrays.asList("del mattino"));  // "... fino alle due del mattino"
+
     public static final Set<String> START_VERBS = new HashSet<>(Arrays.asList("iniziare", "partire", "prendere", "prenotare", "usare"));
     public static final Set<String> END_VERBS = new HashSet<>(Arrays.asList("arrivare", "lasciare", "posare", "raggiungere", "giungere", "andare"));
 

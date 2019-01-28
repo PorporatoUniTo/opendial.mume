@@ -454,7 +454,7 @@
                 </effect>
             </case>
             <case>
-                <!-- If theuser said that s/he knowns intermidiate stops but didn't communicate them, ask -->
+                <!-- If the user said that s/he knowns intermidiate stops but didn't communicate them, ask -->
                 <condition>
                     <if var="current_step" value="INFORMATION_RETRIEVAL"/>
                     <if var="a_m" value="ASK_STOPS"/>

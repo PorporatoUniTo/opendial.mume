@@ -10,7 +10,7 @@
 
         <!-- Starting prompt -->
         <variable id="u_m">
-            <value>Benvenuto nel sistema di prenotazione MuMeChat!</value>
+            <value>Benvenuto nel sistema di prenotazione MuMeChat!\nCome posso aiutarti?</value>
         </variable>
         <!-- The agent has three possible states:
             - Information Extraction: the information for the request is incomplete

@@ -11,8 +11,6 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.stream.Collectors;
 
-import static opendial.modules.mume.config.Shared.log;
-
 public class TimeInfo {
     private String time;
     private List<IndexedWord> wordList;
@@ -23,10 +21,12 @@ public class TimeInfo {
     private List<IndexedWord> governors;
     private IndexedWord firstVerbGovernorWord;
     // private CoreLabel firstVerbGovernorToken;
+    private boolean inDigits;
     public boolean isStart;
     public boolean isEnd;
 
-    private TimeInfo() {}
+    private TimeInfo() {
+    }
 
     public TimeInfo(List<IndexedWord> ner, List<CoreLabel> tokens, SemanticGraph dependencies) {
         /* IMPORTANT: there is a shift of +1 between IndexedWord.index() and TokensAnnotation's index */
@@ -86,6 +86,14 @@ public class TimeInfo {
         }
         if (!caseFound) caseType = "";
 
+        this.inDigits = false;
+        String words = ner.stream().map(IndexedWord::originalText).collect(Collectors.joining(" "));
+        for (int i = 0; i < words.length(); i++)
+            if (Character.isDigit(words.charAt(i))) {
+                this.inDigits = true;
+                break;
+            }
+
         isStart = false;
         isEnd = false;
     }
@@ -107,6 +115,10 @@ public class TimeInfo {
         toReturn.isEnd = false;
 
         return toReturn;
+    }
+
+    public String getWords() {
+        return wordList.stream().map(IndexedWord::originalText).collect(Collectors.joining(" "));
     }
 
     List<IndexedWord> getGovernors() {
@@ -132,6 +144,10 @@ public class TimeInfo {
             if (wordList.contains(governorWord))
                 return true;
         return false;
+    }
+
+    public boolean isInDigits() {
+        return inDigits;
     }
 
     @Override
