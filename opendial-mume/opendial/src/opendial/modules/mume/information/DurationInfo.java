@@ -102,7 +102,9 @@ public class DurationInfo {
         return governors;
     }
 
-    IndexedWord getFirstVerbGovernorWord() {
-        return firstVerbGovernorWord;
+    public String getFirstVerbGovernorLemma() {
+        if (firstVerbGovernorWord != null)
+            return firstVerbGovernorWord.lemma().toLowerCase();
+        return "";
     }
 }

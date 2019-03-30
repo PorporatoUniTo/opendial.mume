@@ -25,7 +25,7 @@ class VehicleTypeExtractor {
      * @param oldInformation the Map<String, String> that contains the old information
      */
     void extractVehicleType(String userUtterance, Map<String, String> information, Map<String, String> oldInformation) {
-        String vehicleType = oldInformation.get("vehicleType");
+        String vehicleType = oldInformation.get(VEHICLE_TYPE);
         if (vehicleType.equals(NONE))
             vehicleType = "economy";
 
@@ -37,13 +37,13 @@ class VehicleTypeExtractor {
             while (!specialTypeFound && typeSynonymsIterator.hasNext()) {
                 String typeSynonym = typeSynonymsIterator.next();
                 if (userUtterance.contains(typeSynonym)) {
-                    information.put("vehicleType", pair.getKey());
+                    information.put(VEHICLE_TYPE, pair.getKey());
                     specialTypeFound = true;
                 }
             }
         }
         if (!specialTypeFound)
-            information.put("vehicleType", vehicleType);
+            information.put(VEHICLE_TYPE, vehicleType);
     }
 
 }

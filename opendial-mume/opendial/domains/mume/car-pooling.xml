@@ -10,7 +10,9 @@
 
         <!-- Starting prompt -->
         <variable id="u_m">
-            <value>Benvenuto nel sistema di prenotazione MuMeChat!\nCome posso aiutarti?</value>
+            <value>Benvenuto nel sistema di prenotazione MuMeChat!
+                Come posso aiutarti?
+            </value>
         </variable>
         <!-- The agent has three possible states:
             - Information Extraction: the information for the request is incomplete
@@ -30,41 +32,79 @@
         <variable id="a_u">
             <!-- The user can:
                 - Book a vehicle (BOOKING)
-                - Ask for a ride (ASK_RIDE) LATER -->
+                - Modify a reservation (MOD_RES) LATER
+                - Cancel a reservation (CANCEL_RES) LATER -->
             <value>BOOKING</value>
         </variable>
-        <variable id="cityIndexedWords">
+        <variable id="startTime">
+            <value>Missing</value>
+        </variable>
+        <variable id="endTime">
             <value>Missing</value>
         </variable>
         <variable id="startDate">
             <value>Missing</value>
         </variable>
-        <variable id="startTime">
-            <value>Missing</value>
-        </variable>
-
         <variable id="endDate">
             <value>Missing</value>
         </variable>
+
         <variable id="startSlot">
             <value>Missing</value>
         </variable>
-        <variable id="endCity">
-            <value>Missing</value>
+        <variable id="startLat">
+            <value>-100</value>
+        </variable>
+        <variable id="startLon">
+            <value>-200</value>
         </variable>
         <variable id="endSlot">
             <value>Missing</value>
         </variable>
-        <variable id="endTime">
+        <variable id="endLat">
+            <value>-100</value>
+        </variable>
+        <variable id="endLon">
+            <value>-200</value>
+        </variable>
+        <variable id="startAddress">
+            <value>Missing</value>
+        </variable>
+        <variable id="endAddress">
+            <value>Missing</value>
+        </variable>
+        <variable id="startCity">
+            <value>Missing</value>
+        </variable>
+        <variable id="endCity">
             <value>Missing</value>
         </variable>
         <variable id="vehicleType">
             <value>Missing</value>
         </variable>
 
+        <variable id="inferredStartCity">
+            <value>false</value>
+        </variable>
+        <variable id="inferredEndCity">
+            <value>false</value>
+        </variable>
+        <variable id="startSortedSlots">
+            <value>[]</value>
+        </variable>
+        <variable id="endSortedSlots">
+            <value>[]</value>
+        </variable>
+        <variable id="unspecifiedStartSlot">
+            <value>true</value>
+        </variable>
+        <variable id="unspecifiedEndSlot">
+            <value>true</value>
+        </variable>
+
         <!--
         <variable id="u_u">
-            <value>Voglio prendere una macchina il 26 ottobre alle 14 da piazza Castello e voglio posarla a Volvera alle sette del 29 Ottobre
+            <value>Voglio prendere una macchina il 5 maggio alle 14 da corso Svizzera 185 e voglio posarla a Rivoli alle sette del 6 maggio
             </value>
         </variable>
         -->

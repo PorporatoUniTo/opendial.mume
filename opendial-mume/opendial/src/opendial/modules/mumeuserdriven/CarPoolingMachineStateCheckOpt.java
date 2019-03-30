@@ -114,8 +114,10 @@ public class CarPoolingMachineStateCheckOpt implements Module {
      */
     @Override
     public void trigger(DialogueState state, Collection<String> updatedVars) {
-        if (updatedVars.contains("a_m") &&
-                state.hasChanceNode("a_m")) {
+        if ((updatedVars.contains("a_m") &&
+                state.hasChanceNode("a_m")) ||
+                (updatedVars.contains("NewInformation") &&
+                        state.hasChanceNode("NewInformation"))) {
 
             log.info("\n");
             log.info("Machine Action:\t" + state.queryProb("a_m").getBest().toString());

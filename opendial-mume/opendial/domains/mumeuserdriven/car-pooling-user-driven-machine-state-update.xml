@@ -1,27 +1,178 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <domain id="MachineState">
-    <model id="InformationRetrieval" trigger="NewInformation">
-        <rule id="StartSlot">
+    <model id="InformationRetrieval" trigger="newInformation">
+        <rule id="startTime">
+            <case>
+                <!-- The user communicate a start time -->
+                <!-- The system has to check if the itime is a suitable one -->
+                <condition>
+                    <if var="current_step" value="INFORMATION_RETRIEVAL"/>
+                    <if var="a_m" relation="in" value="[ASK_START_TIME,ASK_START_TIME_MORE]"/>
+                    <if var="newInformation" relation="contains" value="UU"/>
+
+                    <!-- Question: "Quando vuoi iniziare il tuo viaggio?" -->
+                    <if var="newInformation" relation="contains" value="Time({T})"/>
+                    <if var="newInformation" relation="contains" value="Date({D})"/>
+                </condition>
+                <effect>
+                    <set var="startDate" value="{D}"/>
+                    <set var="startTime" value="{T}"/>
+
+                    <!-- Go on -->
+                    <set var="newInformation" value="[]"/>
+                    <set var="a_m" value="ASK_END_TIME"/>
+                </effect>
+            </case>
+            <case>
+                <!--If the user didn't comunicate a start time, keep asking -->
+                <condition>
+                    <if var="current_step" value="INFORMATION_RETRIEVAL"/>
+                    <if var="a_m" relation="in" value="[ASK_START_TIME,ASK_START_TIME_MORE]"/>
+                    <if var="newInformation" relation="contains" value="UU"/>
+
+                    <if var="newInformation" relation="!contains" value="Time(*)"/>
+                </condition>
+                <effect>
+                    <set var="newInformation" value="[]"/>
+                    <set var="a_m" value="ASK_START_TIME_MORE"/>
+                </effect>
+            </case>
+        </rule>
+
+        <rule id="endTime">
+            <case>
+                <!--The user doesn't know the end time -->
+                <condition>
+                    <if var="current_step" value="INFORMATION_RETRIEVAL"/>
+                    <if var="a_m" relation="in" value="[ASK_END_TIME,ASK_END_TIME_MORE]"/>
+                    <if var="newInformation" relation="contains" value="UU"/>
+
+                    <!-- Qustion: "Sai quando poserai l'auto?" -->
+                    <if var="newInformation" relation="contains" value="Answer(false)"/>
+                    <if var="newInformation" relation="!contains" value="Time(*)"/>
+                </condition>
+                <effect>
+                    <set var="endTimeKnown" value="false"/>
+                    <set var="endTime" value="Missing"/>
+                    <set var="endDate" value="Missing"/>
+
+                    <!-- Go on -->
+                    <set var="newInformation" value="[]"/>
+                    <set var="a_m" value="ASK_START_SLOT"/>
+                </effect>
+            </case>
+            <case>
+                <!--The user communicated the end time -->
+                <condition>
+                    <if var="current_step" value="INFORMATION_RETRIEVAL"/>
+                    <if var="a_m" relation="in" value="[ASK_END_TIME,ASK_END_TIME_MORE]"/>
+                    <if var="newInformation" relation="contains" value="UU"/>
+
+                    <if var="newInformation" relation="contains" value="Time({T})"/>
+                    <if var="newInformation" relation="contains" value="Date({D})"/>
+                </condition>
+                <effect>
+                    <set var="endTimeKnown" value="true"/>
+                    <set var="endTime" value="{T}"/>
+                    <set var="endDate" value="{D}"/>
+
+                    <set var="newInformation" value="[]"/>
+                    <set var="a_m" value="ASK_START_SLOT"/>
+                </effect>
+            </case>
+            <case>
+                <!--The user keeps telling nonsense instead of the start time -->
+                <condition>
+                    <if var="current_step" value="INFORMATION_RETRIEVAL"/>
+                    <if var="a_m" value="ASK_END_TIME"/>
+                    <if var="newInformation" relation="contains" value="UU"/>
+
+                    <if var="newInformation" relation="contains" value="Answer(true)"/>
+                    <if var="newInformation" relation="!contains" value="Time(*)"/>
+                </condition>
+                <effect>
+                    <set var="endTimeKnown" value="true"/>
+
+                    <set var="newInformation" value="[]"/>
+                    <set var="a_m" value="ASK_END_TIME_MORE"/>
+                </effect>
+            </case>
+            <case>
+                <!--The user didn't respond in any meaningful way: reset -->
+                <condition>
+                    <if var="current_step" value="INFORMATION_RETRIEVAL"/>
+                    <if var="a_m" relation="in" value="[ASK_END_TIME,ASK_END_TIME_MORE]"/>
+                    <if var="newInformation" relation="contains" value="UU"/>
+
+                    <or>
+                        <and>
+                            <if var="newInformation" relation="!contains" value="Answer(*)"/>
+                            <if var="newInformation" relation="!contains" value="Time(*)"/>
+                        </and>
+                        <and>
+                            <if var="newInformation" relation="contains" value="Answer(false)"/>
+                            <if var="newInformation" relation="contains" value="Time(*)"/>
+                        </and>
+                    </or>
+                </condition>
+                <effect>
+                    <set var="newInformation" value="[]"/>
+                    <set var="a_m" value="ASK_END_TIME"/>
+                </effect>
+            </case>
+        </rule>
+
+        <rule id="startSlot">
             <case>
                 <!--The user communicate both the start slot and the start city -->
                 <condition>
                     <if var="current_step" value="INFORMATION_RETRIEVAL"/>
                     <if var="a_m" value="ASK_START_SLOT"/>
-                    <if var="NewInformation" relation="contains" value="UU"/>
+                    <if var="newInformation" relation="contains" value="UU"/>
 
-                    <if var="NewInformation" relation="contains" value="Slot({X})"/>
-                    <if var="NewInformation" relation="contains" value="City({Y})"/>
-                    <if var="NewInformation" relation="contains" value="Lat({LAT})"/>
-                    <if var="NewInformation" relation="contains" value="Lon({LON})"/>
+                    <if var="newInformation" relation="contains" value="Slot({X})"/>
+                    <if var="newInformation" relation="contains" value="Address({Y})"/>
+                    <if var="newInformation" relation="contains" value="City({Z})"/>
+                    <if var="newInformation" relation="contains" value="Lat({LAT})"/>
+                    <if var="newInformation" relation="contains" value="Lon({LON})"/>
+                    <if var="newInformation" relation="!contains" value="startSlotUnspecified"/>
                 </condition>
                 <effect>
-                    <set var="StartSlot" value="{X}"/>
-                    <set var="StartCity" value="{Y}"/>
-                    <set var="StartLat" value="{LAT}"/>
-                    <set var="StartLon" value="{LON}"/>
+                    <set var="startSlot" value="{X}"/>
+                    <set var="startAddress" value="{Y}"/>
+                    <set var="startCity" value="{Z}"/>
+                    <set var="startLat" value="{LAT}"/>
+                    <set var="startLon" value="{LON}"/>
+                    <!-- <set var="startSlotUnspecified" value="false"/> -->
 
-                    <set var="NewInformation" value="[]"/>
-                    <set var="a_m" value="ASK_START_TIME"/>
+                    <set var="newInformation" value="[]"/>
+                    <set var="a_m" value="ASK_END_SLOT"/>
+                </effect>
+            </case>
+            <case>
+                <!--The user communicate both the start slot and the start city -->
+                <condition>
+                    <if var="current_step" value="INFORMATION_RETRIEVAL"/>
+                    <if var="a_m" value="ASK_START_SLOT"/>
+                    <if var="newInformation" relation="contains" value="UU"/>
+
+                    <if var="newInformation" relation="contains" value="Slot({X})"/>
+                    <if var="newInformation" relation="contains" value="Address({Y})"/>
+                    <if var="newInformation" relation="contains" value="City({Z})"/>
+                    <if var="newInformation" relation="contains" value="Lat({LAT})"/>
+                    <if var="newInformation" relation="contains" value="Lon({LON})"/>
+                    <if var="newInformation" relation="contains" value="startSlotUnspecified"/>
+                </condition>
+                <effect>
+                    <set var="startSlot" value="{X}"/>
+                    <set var="startAddress" value="{Y}"/>
+                    <set var="startCity" value="{Z}"/>
+                    <set var="startLat" value="{LAT}"/>
+                    <set var="startLon" value="{LON}"/>
+                    <set var="startSlotUnspecified" value="true"/>
+
+                    <set var="newInformation" value="[]"/>
+                    <set var="a_m" value="ASK_END_SLOT"/>
                 </effect>
             </case>
             <case>
@@ -29,21 +180,26 @@
                 <condition>
                     <if var="current_step" value="INFORMATION_RETRIEVAL"/>
                     <if var="a_m" value="ASK_START_SLOT"/>
-                    <if var="NewInformation" relation="contains" value="UU"/>
+                    <if var="newInformation" relation="contains" value="UU"/>
 
                     <!--The code has to check if the comunicated city corresponds to the inferred city -->
-                    <if var="NewInformation" relation="contains" value="Slot({X})"/>
-                    <if var="NewInformation" relation="contains" value="InferredCity({Y})"/>
-                    <if var="NewInformation" relation="contains" value="Lat({LAT})"/>
-                    <if var="NewInformation" relation="contains" value="Lon({LON})"/>
+                    <if var="newInformation" relation="contains" value="Slot({X})"/>
+                    <if var="newInformation" relation="contains" value="Address({Y})"/>
+                    <if var="newInformation" relation="contains" value="InferredCity({Z})"/>
+                    <if var="newInformation" relation="contains" value="Lat({LAT})"/>
+                    <if var="newInformation" relation="contains" value="Lon({LON})"/>
+                    <!-- The startSlot in this case has been given by the user
+                    <if var="newInformation" relation="!contains" value="startSlotUnspecified"/> -->
                 </condition>
                 <effect>
-                    <set var="StartSlot" value="{X}"/>
-                    <set var="StartCity" value="{Y}"/>
-                    <set var="StartLat" value="{LAT}"/>
-                    <set var="StartLon" value="{LON}"/>
+                    <set var="startSlot" value="{X}"/>
+                    <set var="startAddress" value="{Y}"/>
+                    <set var="startCity" value="{Z}"/>
+                    <set var="startLat" value="{LAT}"/>
+                    <set var="startLon" value="{LON}"/>
+                    <!-- <set var="startSlotUnspecified" value="false"/> -->
 
-                    <set var="NewInformation" value="[]"/>
+                    <set var="newInformation" value="[]"/>
                     <set var="a_m" value="ASK_START_CITY_CONFIRM"/>
                 </effect>
             </case>
@@ -52,12 +208,12 @@
                 <condition>
                     <if var="current_step" value="INFORMATION_RETRIEVAL"/>
                     <if var="a_m" value="ASK_START_SLOT"/>
-                    <if var="NewInformation" relation="contains" value="UU"/>
+                    <if var="newInformation" relation="contains" value="UU"/>
 
-                    <if var="NewInformation" relation="!contains" value="Slot(*)"/>
+                    <if var="newInformation" relation="!contains" value="Address(*)"/>
                 </condition>
                 <effect>
-                    <set var="NewInformation" value="[]"/>
+                    <set var="newInformation" value="[]"/>
                     <set var="a_m" value="ASK_START_SLOT"/>
                 </effect>
             </case>
@@ -67,14 +223,14 @@
                 <condition>
                     <if var="current_step" value="INFORMATION_RETRIEVAL"/>
                     <if var="a_m" value="ASK_START_CITY_CONFIRM"/>
-                    <if var="NewInformation" relation="contains" value="UU"/>
+                    <if var="newInformation" relation="contains" value="UU"/>
 
-                    <if var="NewInformation" relation="contains" value="Answer(true)"/>
+                    <if var="newInformation" relation="contains" value="Answer(true)"/>
                 </condition>
                 <effect>
                     <!-- Go on -->
-                    <set var="NewInformation" value="[]"/>
-                    <set var="a_m" value="ASK_START_TIME"/>
+                    <set var="newInformation" value="[]"/>
+                    <set var="a_m" value="ASK_END_SLOT"/>
                 </effect>
             </case>
             <case>
@@ -82,17 +238,17 @@
                 <condition>
                     <if var="current_step" value="INFORMATION_RETRIEVAL"/>
                     <if var="a_m" value="ASK_START_CITY_CONFIRM"/>
-                    <if var="NewInformation" relation="contains" value="UU"/>
+                    <if var="newInformation" relation="contains" value="UU"/>
 
-                    <if var="NewInformation" relation="contains" value="Answer(false)"/>
+                    <if var="newInformation" relation="contains" value="Answer(false)"/>
                 </condition>
                 <effect>
-                    <set var="StartSlot" value="Missing"/>
-                    <set var="StartCity" value="Missing"/>
-                    <set var="StartLat" value="Missing"/>
-                    <set var="StartLon" value="Missing"/>
+                    <set var="startSlot" value="Missing"/>
+                    <set var="startCity" value="Missing"/>
+                    <set var="startLat" value="Missing"/>
+                    <set var="startLon" value="Missing"/>
 
-                    <set var="NewInformation" value="[]"/>
+                    <set var="newInformation" value="[]"/>
                     <set var="a_m" value="ASK_START_SLOT"/>
                 </effect>
             </case>
@@ -101,75 +257,45 @@
                 <condition>
                     <if var="current_step" value="INFORMATION_RETRIEVAL"/>
                     <if var="a_m" value="ASK_START_CITY_CONFIRM"/>
-                    <if var="NewInformation" relation="contains" value="UU"/>
+                    <if var="newInformation" relation="contains" value="UU"/>
 
-                    <if var="NewInformation" relation="!contains" value="Answer(true)"/>
-                    <if var="NewInformation" relation="!contains" value="Answer(false)"/>
+                    <if var="newInformation" relation="!contains" value="Answer(*)"/>
                 </condition>
                 <effect>
-                    <set var="NewInformation" value="[]"/>
+                    <set var="newInformation" value="[]"/>
                     <set var="a_m" value="ASK_START_CITY_CONFIRM"/>
                 </effect>
             </case>
         </rule>
 
-        <rule id="StartTime">
-            <case>
-                <!--The user communicate a start time -->
-                <!--The system has to check if the itime is a suitable one -->
-                <condition>
-                    <if var="current_step" value="INFORMATION_RETRIEVAL"/>
-                    <if var="a_m" relation="in" value="[ASK_START_TIME,ASK_START_TIME_MORE]"/>
-                    <if var="NewInformation" relation="contains" value="UU"/>
-
-                    <if var="NewInformation" relation="contains" value="Time({T})"/>
-                    <if var="NewInformation" relation="contains" value="Date({D})"/>
-                </condition>
-                <effect>
-                    <set var="StartDate" value="{D}"/>
-                    <set var="StartTime" value="{T}"/>
-
-                    <!-- Go on -->
-                    <set var="NewInformation" value="[]"/>
-                    <set var="a_m" value="ASK_END_SLOT"/>
-                </effect>
-            </case>
-            <case>
-                <!--If the user didn't comunicate a start time, keep asking -->
-                <condition>
-                    <if var="current_step" value="INFORMATION_RETRIEVAL"/>
-                    <if var="a_m" relation="in" value="[ASK_START_TIME,ASK_START_TIME_MORE]"/>
-                    <if var="NewInformation" relation="contains" value="UU"/>
-
-                    <if var="NewInformation" relation="!contains" value="Time(*)"/>
-                </condition>
-                <effect>
-                    <set var="NewInformation" value="[]"/>
-                    <set var="a_m" value="ASK_START_TIME_MORE"/>
-                </effect>
-            </case>
-        </rule>
-
-        <rule id="EndSlot">
+        <rule id="endSlot">
             <case>
                 <!--Jurney type: A->A -->
                 <condition>
                     <if var="current_step" value="INFORMATION_RETRIEVAL"/>
                     <if var="a_m" value="ASK_END_SLOT"/>
-                    <if var="NewInformation" relation="contains" value="UU"/>
+                    <if var="newInformation" relation="contains" value="UU"/>
 
-                    <!-- Question: "Vuoi tornare dove sei partito?" -->
-                    <if var="NewInformation" relation="contains" value="Answer(true)"/>
+                    <!-- Question: "Vuoi tornare da dove sei partito?" -->
+                    <if var="newInformation" relation="contains" value="Answer(true)"/>
+                    <or>
+                        <if var="newInformation" relation="!contains" value="Address(*)"/>
+                        <and>
+                            <if var="newInformation" relation="contains" value="Address({S})"/>
+                            <if var="startSlot" value="{S}"/>
+                        </and>
+                    </or>
                 </condition>
                 <effect>
-                    <set var="EndSlot" value="{StartSlot}"/>
-                    <set var="EndCity" value="{StartCity}"/>
-                    <set var="EndLat" value="{StartLat}"/>
-                    <set var="EndLon" value="{StartLon}"/>
+                    <set var="endSlot" value="{startSlot}"/>
+                    <set var="endAddress" value="{startAddress}"/>
+                    <set var="endCity" value="{startCity}"/>
+                    <set var="endLat" value="{startLat}"/>
+                    <set var="endLon" value="{startLon}"/>
 
                     <!-- Go on -->
-                    <set var="NewInformation" value="[]"/>
-                    <set var="a_m" value="ASK_END_TIME"/>
+                    <set var="newInformation" value="[]"/>
+                    <set var="a_m" value="ASK_VEHICLE_TYPE"/>
                 </effect>
             </case>
             <case>
@@ -177,22 +303,24 @@
                 <condition>
                     <if var="current_step" value="INFORMATION_RETRIEVAL"/>
                     <if var="a_m" relation="in" value="[ASK_END_SLOT,ASK_END_SLOT_MORE]"/>
-                    <if var="NewInformation" relation="contains" value="UU"/>
+                    <if var="newInformation" relation="contains" value="UU"/>
 
-                    <if var="NewInformation" relation="contains" value="Slot({X})"/>
-                    <if var="NewInformation" relation="contains" value="City({Y})"/>
-                    <if var="NewInformation" relation="contains" value="Lat({LAT})"/>
-                    <if var="NewInformation" relation="contains" value="Lon({LON})"/>
+                    <if var="newInformation" relation="contains" value="Slot({X})"/>
+                    <if var="newInformation" relation="contains" value="Address({Y})"/>
+                    <if var="newInformation" relation="contains" value="City({Z})"/>
+                    <if var="newInformation" relation="contains" value="Lat({LAT})"/>
+                    <if var="newInformation" relation="contains" value="Lon({LON})"/>
                 </condition>
                 <effect>
-                    <set var="EndSlot" value="{X}"/>
-                    <set var="EndCity" value="{Y}"/>
-                    <set var="EndLat" value="{LAT}"/>
-                    <set var="EndLon" value="{LON}"/>
+                    <set var="endSlot" value="{startSlot}"/>
+                    <set var="endAddress" value="{startAddress}"/>
+                    <set var="endCity" value="{startCity}"/>
+                    <set var="endLat" value="{LAT}"/>
+                    <set var="endLon" value="{LON}"/>
 
                     <!-- Go on -->
-                    <set var="NewInformation" value="[]"/>
-                    <set var="a_m" value="ASK_END_TIME"/>
+                    <set var="newInformation" value="[]"/>
+                    <set var="a_m" value="ASK_VEHICLE_TYPE"/>
                 </effect>
             </case>
             <case>
@@ -200,22 +328,24 @@
                 <condition>
                     <if var="current_step" value="INFORMATION_RETRIEVAL"/>
                     <if var="a_m" relation="in" value="[ASK_END_SLOT,ASK_END_SLOT_MORE]"/>
-                    <if var="NewInformation" relation="contains" value="UU"/>
+                    <if var="newInformation" relation="contains" value="UU"/>
 
-                    <if var="NewInformation" relation="contains" value="Slot({X})"/>
-                    <if var="NewInformation" relation="contains" value="InferredCity({Y})"/>
-                    <if var="NewInformation" relation="contains" value="Lat({LAT})"/>
-                    <if var="NewInformation" relation="contains" value="Lon({LON})"/>
+                    <if var="newInformation" relation="contains" value="Slot({X})"/>
+                    <if var="newInformation" relation="contains" value="Address({Y})"/>
+                    <if var="newInformation" relation="contains" value="InferredCity({Z})"/>
+                    <if var="newInformation" relation="contains" value="Lat({LAT})"/>
+                    <if var="newInformation" relation="contains" value="Lon({LON})"/>
                 </condition>
                 <effect>
-                    <set var="EndSlot" value="{X}"/>
-                    <set var="EndCity" value="{Y}"/>
-                    <set var="EndLat" value="{LAT}"/>
-                    <set var="EndLon" value="{LON}"/>
+                    <set var="endSlot" value="{startSlot}"/>
+                    <set var="endAddress" value="{startAddress}"/>
+                    <set var="endCity" value="{startCity}"/>
+                    <set var="endLat" value="{LAT}"/>
+                    <set var="endLon" value="{LON}"/>
 
                     <!-- Go on -->
-                    <set var="NewInformation" value="[]"/>
-                    <set var="a_m" value="ASK_END_TIME"/>
+                    <set var="newInformation" value="[]"/>
+                    <set var="a_m" value="ASK_END_CITY_CONFIRM"/>
                 </effect>
             </case>
             <case>
@@ -223,13 +353,13 @@
                 <condition>
                     <if var="current_step" value="INFORMATION_RETRIEVAL"/>
                     <if var="a_m" value="ASK_END_SLOT"/>
-                    <if var="NewInformation" relation="contains" value="UU"/>
+                    <if var="newInformation" relation="contains" value="UU"/>
 
-                    <if var="NewInformation" relation="contains" value="Answer(false)"/>
-                    <if var="NewInformation" relation="!contains" value="Slot(*)"/>
+                    <if var="newInformation" relation="contains" value="Answer(false)"/>
+                    <if var="newInformation" relation="!contains" value="Address(*)"/>
                 </condition>
                 <effect>
-                    <set var="NewInformation" value="[]"/>
+                    <set var="newInformation" value="[]"/>
                     <set var="a_m" value="ASK_END_SLOT_MORE"/>
                 </effect>
             </case>
@@ -237,120 +367,78 @@
                 <condition>
                     <if var="current_step" value="INFORMATION_RETRIEVAL"/>
                     <if var="a_m" value="ASK_END_SLOT_MORE"/>
-                    <if var="NewInformation" relation="contains" value="UU"/>
+                    <if var="newInformation" relation="contains" value="UU"/>
 
-                    <if var="NewInformation" relation="!contains" value="Answer(true)"/>
-                    <if var="NewInformation" relation="!contains" value="Answer(false)"/>
-                    <if var="NewInformation" relation="!contains" value="Slot(*)"/>
+                    <or>
+                        <and>
+                            <if var="newInformation" relation="!contains" value="Answer(*)"/>
+                            <if var="newInformation" relation="!contains" value="Address(*)"/>
+                        </and>
+                        <and>
+                            <if var="newInformation" relation="contains" value="Answer(true)"/>
+                            <if var="newInformation" relation="contains" value="Address({A})"/>
+                            <if var="startSlot" relation="!=" value="{S}"/>
+                        </and>
+                    </or>
                 </condition>
                 <effect>
-                    <set var="NewInformation" value="[]"/>
+                    <set var="newInformation" value="[]"/>
+                    <set var="a_m" value="ASK_END_SLOT"/>
+                </effect>
+            </case>
+
+            <case>
+                <!--The user confirms the inferred city -->
+                <condition>
+                    <if var="current_step" value="INFORMATION_RETRIEVAL"/>
+                    <if var="a_m" value="ASK_END_CITY_CONFIRM"/>
+                    <if var="newInformation" relation="contains" value="UU"/>
+
+                    <if var="newInformation" relation="contains" value="Answer(true)"/>
+                </condition>
+                <effect>
+                    <!-- Go on -->
+                    <set var="newInformation" value="[]"/>
+                    <set var="a_m" value="ASK_VEHICLE_TYPE"/>
+                </effect>
+            </case>
+            <case>
+                <!--The system rejects the inferred city -->
+                <condition>
+                    <if var="current_step" value="INFORMATION_RETRIEVAL"/>
+                    <if var="a_m" value="ASK_END_CITY_CONFIRM"/>
+                    <if var="newInformation" relation="contains" value="UU"/>
+
+                    <if var="newInformation" relation="contains" value="Answer(false)"/>
+                </condition>
+                <effect>
+                    <set var="endSlot" value="Missing"/>
+                    <set var="endCity" value="Missing"/>
+                    <set var="endLat" value="Missing"/>
+                    <set var="endLon" value="Missing"/>
+
+                    <set var="newInformation" value="[]"/>
                     <set var="a_m" value="ASK_END_SLOT"/>
                 </effect>
             </case>
         </rule>
 
-        <rule id="EndTime">
-            <case>
-                <!--The user doesn't know the end time -->
-                <condition>
-                    <if var="current_step" value="INFORMATION_RETRIEVAL"/>
-                    <if var="a_m" value="ASK_END_TIME"/>
-                    <if var="NewInformation" relation="contains" value="UU"/>
-
-                    <!-- Qustion: "Sai a che ora poserai l'auto?" -->
-                    <if var="NewInformation" relation="contains" value="Answer(false)"/>
-                </condition>
-                <effect>
-                    <set var="EndTimeKnown" value="false"/>
-
-                    <!-- Go on -->
-                    <set var="NewInformation" value="[]"/>
-                    <set var="a_m" value="ASK_VEHICLE_TYPE"/>
-                </effect>
-            </case>
-            <case>
-                <!--The user communicated the end time -->
-                <condition>
-                    <if var="current_step" value="INFORMATION_RETRIEVAL"/>
-                    <if var="a_m" relation="in" value="[ASK_END_TIME,ASK_END_TIME_MORE]"/>
-                    <if var="NewInformation" relation="contains" value="UU"/>
-
-                    <if var="NewInformation" relation="contains" value="Time({T})"/>
-                    <if var="NewInformation" relation="contains" value="Date({D})"/>
-                </condition>
-                <effect>
-                    <set var="EndTimeKnown" value="true"/>
-                    <set var="EndTime" value="{T}"/>
-                    <set var="EndDate" value="{D}"/>
-
-                    <set var="NewInformation" value="[]"/>
-                    <set var="a_m" value="ASK_VEHICLE_TYPE"/>
-                </effect>
-            </case>
-            <case>
-                <!--The user keeps telling nonsense instead of the start time -->
-                <condition>
-                    <if var="current_step" value="INFORMATION_RETRIEVAL"/>
-                    <if var="a_m" value="ASK_END_TIME"/>
-                    <if var="NewInformation" relation="contains" value="UU"/>
-
-                    <if var="NewInformation" relation="contains" value="Answer(true)"/>
-                    <if var="NewInformation" relation="!contains" value="Time(*)"/>
-                </condition>
-                <effect>
-                    <set var="NewInformation" value="[]"/>
-                    <set var="a_m" value="ASK_END_TIME_MORE"/>
-                </effect>
-            </case>
-            <case>
-                <!--The user keeps telling nonsense instead of the start time -->
-                <condition>
-                    <if var="current_step" value="INFORMATION_RETRIEVAL"/>
-                    <if var="a_m" value="ASK_END_TIME_MORE"/>
-                    <if var="NewInformation" relation="contains" value="UU"/>
-
-                    <if var="NewInformation" relation="!contains" value="Time(*)"/>
-                </condition>
-                <effect>
-                    <set var="NewInformation" value="[]"/>
-                    <set var="a_m" value="ASK_END_TIME_MORE"/>
-                </effect>
-            </case>
-            <case>
-                <!--The user didn't respond in any meaningful way -->
-                <condition>
-                    <if var="current_step" value="INFORMATION_RETRIEVAL"/>
-                    <if var="a_m" value="ASK_END_TIME"/>
-                    <if var="NewInformation" relation="contains" value="UU"/>
-
-                    <if var="NewInformation" relation="!contains" value="Answer(true)"/>
-                    <if var="NewInformation" relation="!contains" value="Answer(false)"/>
-                    <if var="NewInformation" relation="!contains" value="Time(*)"/>
-                </condition>
-                <effect>
-                    <set var="NewInformation" value="[]"/>
-                    <set var="a_m" value="ASK_END_TIME"/>
-                </effect>
-            </case>
-        </rule>
-
-        <rule id="VehicleType">
+        <rule id="vehicleType">
             <case>
                 <!-- The user is fine with using a base economic car model -->
                 <condition>
                     <if var="current_step" value="INFORMATION_RETRIEVAL"/>
                     <if var="a_m" value="ASK_VEHICLE_TYPE"/>
-                    <if var="NewInformation" relation="contains" value="UU"/>
+                    <if var="newInformation" relation="contains" value="UU"/>
 
                     <!-- Question: "Va bene un'auto economica?" -->
-                    <if var="NewInformation" relation="contains" value="Answer(true)"/>
+                    <if var="newInformation" relation="contains" value="Answer(true)"/>
                 </condition>
                 <effect>
-                    <set var="VehicleType" value="economy"/>
+                    <set var="vehicleType" value="economy"/>
 
-                    <set var="NewInformation" value="[]"/>
-                    <set var="a_m" value="ASK_STOPS"/>
+                    <set var="newInformation" value="[]"/>
+                    <set var="a_m" value="FINAL_CONFIRM"/>
                 </effect>
             </case>
             <case>
@@ -358,15 +446,15 @@
                 <condition>
                     <if var="current_step" value="INFORMATION_RETRIEVAL"/>
                     <if var="a_m" relation="in" value="[ASK_VEHICLE_TYPE,ASK_VEHICLE_TYPE_MORE]"/>
-                    <if var="NewInformation" relation="contains" value="UU"/>
+                    <if var="newInformation" relation="contains" value="UU"/>
 
-                    <if var="NewInformation" relation="contains" value="VehicleType({VT})"/>
+                    <if var="newInformation" relation="contains" value="VehicleType({VT})"/>
                 </condition>
                 <effect>
-                    <set var="VehicleType" value="{VT}"/>
+                    <set var="vehicleType" value="{VT}"/>
 
-                    <set var="NewInformation" value="[]"/>
-                    <set var="a_m" value="ASK_STOPS"/>
+                    <set var="newInformation" value="[]"/>
+                    <set var="a_m" value="FINAL_CONFIRM"/>
                 </effect>
             </case>
             <case>
@@ -374,13 +462,13 @@
                 <condition>
                     <if var="current_step" value="INFORMATION_RETRIEVAL"/>
                     <if var="a_m" value="ASK_VEHICLE_TYPE"/>
-                    <if var="NewInformation" relation="contains" value="UU"/>
+                    <if var="newInformation" relation="contains" value="UU"/>
 
-                    <if var="NewInformation" relation="contains" value="Answer(false)"/>
-                    <if var="NewInformation" relation="!contains" value="VehicleType(*)"/>
+                    <if var="newInformation" relation="contains" value="Answer(false)"/>
+                    <if var="newInformation" relation="!contains" value="vehicleType(*)"/>
                 </condition>
                 <effect>
-                    <set var="NewInformation" value="[]"/>
+                    <set var="newInformation" value="[]"/>
                     <set var="a_m" value="ASK_VEHICLE_TYPE_MORE"/>
                 </effect>
             </case>
@@ -389,120 +477,121 @@
                 <condition>
                     <if var="current_step" value="INFORMATION_RETRIEVAL"/>
                     <if var="a_m" value="ASK_VEHICLE_TYPE_MORE"/>
-                    <if var="NewInformation" relation="contains" value="UU"/>
+                    <if var="newInformation" relation="contains" value="UU"/>
 
-                    <if var="NewInformation" relation="!contains" value="VehicleType(*)"/>
+                    <if var="newInformation" relation="!contains" value="vehicleType(*)"/>
                 </condition>
                 <effect>
-                    <set var="NewInformation" value="[]"/>
+                    <set var="newInformation" value="[]"/>
                     <set var="a_m" value="ASK_VEHICLE_TYPE_MORE"/>
                 </effect>
             </case>
             <case>
-                <!-- The user didn't say anyhting useful -->
+                <!-- The user didn't say anything useful -->
                 <condition>
                     <if var="current_step" value="INFORMATION_RETRIEVAL"/>
                     <if var="a_m" value="ASK_VEHICLE_TYPE"/>
-                    <if var="NewInformation" relation="contains" value="UU"/>
+                    <if var="newInformation" relation="contains" value="UU"/>
 
-                    <if var="NewInformation" relation="!contains" value="Answer(*)"/>
-                    <if var="NewInformation" relation="!contains" value="VehicleType(*)"/>
+                    <if var="newInformation" relation="!contains" value="Answer(*)"/>
+                    <if var="newInformation" relation="!contains" value="vehicleType(*)"/>
                 </condition>
                 <effect>
-                    <set var="NewInformation" value="[]"/>
+                    <set var="newInformation" value="[]"/>
                     <set var="a_m" value="ASK_VEHICLE_TYPE"/>
                 </effect>
             </case>
         </rule>
 
+        <!-- Privacy issues
         <rule id="Stops">
             <case>
-                <!-- The user does not want to tell any intermidiate stop -->
+                <! The user does not want to tell any intermidiate stop >
                 <condition>
                     <if var="current_step" value="INFORMATION_RETRIEVAL"/>
                     <if var="a_m" value="ASK_STOPS"/>
-                    <if var="NewInformation" relation="contains" value="UU"/>
+                    <if var="newInformation" relation="contains" value="UU"/>
 
-                    <!-- Question: "Vuoi indicare delle fermate intermedie?" -->
-                    <if var="NewInformation" relation="contains" value="Answer(false)"/>
+                    <! Question: "Vuoi indicare delle fermate intermedie?" >
+                    <if var="newInformation" relation="contains" value="Answer(false)"/>
                 </condition>
                 <effect>
                     <set var="StopsKnown" value="false"/>
 
-                    <set var="NewInformation" value="[]"/>
+                    <set var="newInformation" value="[]"/>
                     <set var="a_m" value="FINAL_CONFIRM"/>
                 </effect>
             </case>
             <case>
-                <!-- The user communicated some intemidiate stops -->
+                <! The user communicated some intemidiate stops >
                 <condition>
                     <if var="current_step" value="INFORMATION_RETRIEVAL"/>
                     <if var="a_m" relation="in" value="[ASK_STOPS,ASK_STOPS_MORE]"/>
-                    <if var="NewInformation" relation="contains" value="UU"/>
+                    <if var="newInformation" relation="contains" value="UU"/>
 
                     <or>
-                        <if var="NewInformation" relation="contains" value="Address(*)"/>
-                        <if var="NewInformation" relation="contains" value="City(*)"/>
+                        <if var="newInformation" relation="contains" value="Address(*)"/>
+                        <if var="newInformation" relation="contains" value="City(*)"/>
                     </or>
                 </condition>
                 <effect>
                     <set var="StopsKnown" value="true"/>
-                    <set var="Stops" value="{NewInformation}"/>
+                    <set var="Stops" value="{newInformation}"/>
 
-                    <set var="NewInformation" value="[]"/>
+                    <set var="newInformation" value="[]"/>
                     <set var="a_m" value="FINAL_CONFIRM"/>
                 </effect>
             </case>
             <case>
-                <!-- If the user said that s/he knowns intermidiate stops but didn't communicate them, ask -->
+                <! If the user said that s/he knowns intermidiate stops but didn't communicate them, ask >
                 <condition>
                     <if var="current_step" value="INFORMATION_RETRIEVAL"/>
                     <if var="a_m" value="ASK_STOPS"/>
-                    <if var="NewInformation" relation="contains" value="UU"/>
+                    <if var="newInformation" relation="contains" value="UU"/>
 
-                    <if var="NewInformation" relation="contains" value="Answer(true)"/>
-                    <if var="NewInformation" relation="!contains" value="Address(*)"/>
-                    <if var="NewInformation" relation="!contains" value="City(*)"/>
+                    <if var="newInformation" relation="contains" value="Answer(true)"/>
+                    <if var="newInformation" relation="!contains" value="Address(*)"/>
+                    <if var="newInformation" relation="!contains" value="City(*)"/>
                 </condition>
                 <effect>
                     <set var="StopsKnown" value="true"/>
 
-                    <set var="NewInformation" value="[]"/>
+                    <set var="newInformation" value="[]"/>
                     <set var="a_m" value="ASK_STOPS_MORE"/>
                 </effect>
             </case>
             <case>
-                <!-- The user didn't respond in any meaningful way -->
+                <! The user didn't respond in any meaningful way >
                 <condition>
                     <if var="current_step" value="INFORMATION_RETRIEVAL"/>
                     <if var="a_m" value="ASK_STOPS"/>
-                    <if var="NewInformation" relation="contains" value="UU"/>
+                    <if var="newInformation" relation="contains" value="UU"/>
 
-                    <if var="NewInformation" relation="!contains" value="Answer(true)"/>
-                    <if var="NewInformation" relation="!contains" value="Answer(false)"/>
-                    <if var="NewInformation" relation="!contains" value="Address(*)"/>
-                    <if var="NewInformation" relation="!contains" value="City(*)"/>
+                    <if var="newInformation" relation="!contains" value="Answer(*)"/>
+                    <if var="newInformation" relation="!contains" value="Address(*)"/>
+                    <if var="newInformation" relation="!contains" value="City(*)"/>
                 </condition>
                 <effect>
-                    <set var="NewInformation" value="[]"/>
+                    <set var="newInformation" value="[]"/>
                     <set var="a_m" value="ASK_STOPS"/>
                 </effect>
             </case>
         </rule>
+        -->
     </model>
 
-    <model id="RequestProcessing" trigger="NewInformation">
+    <model id="RequestProcessing" trigger="newInformation">
         <rule>
             <case>
                 <condition>
                     <if var="current_step" value="INFORMATION_RETRIEVAL"/>
                     <if var="a_m" value="FINAL_CONFIRM"/>
-                    <if var="NewInformation" relation="contains" value="UU"/>
+                    <if var="newInformation" relation="contains" value="UU"/>
 
-                    <if var="NewInformation" relation="contains" value="Answer(true)"/>
+                    <if var="newInformation" relation="contains" value="Answer(true)"/>
                 </condition>
                 <effect>
-                    <set var="NewInformation" value="[]"/>
+                    <set var="newInformation" value="[]"/>
                     <set var="current_step" value="REQUEST_PROCESSING"/>
                     <set var="a_m" value="SEND_REQUEST"/>
                 </effect>
@@ -512,28 +601,25 @@
                 <condition>
                     <if var="current_step" value="INFORMATION_RETRIEVAL"/>
                     <if var="a_m" value="FINAL_CONFIRM"/>
-                    <if var="NewInformation" relation="contains" value="UU"/>
+                    <if var="newInformation" relation="contains" value="UU"/>
 
-                    <if var="NewInformation" relation="contains" value="Answer(false)"/>
+                    <if var="newInformation" relation="contains" value="Answer(false)"/>
                 </condition>
                 <effect>
                     <!-- Reset -->
-                    <set var="StartSlot" value="Missing"/>
-                    <set var="StartCity" value="Missing"/>
-                    <set var="MaybeStartCity" value="Missing"/>
-                    <set var="StartSlotToBeDefined" value="false"/>
-                    <set var="StartDate" value="Missing"/>
-                    <set var="StartTime" value="Missing"/>
-                    <set var="EndSlot" value="Missing"/>
-                    <set var="EndCity" value="Missing"/>
-                    <set var="EndTimeKnown" value="Missing"/>
-                    <set var="EndDate" value="Missing"/>
-                    <set var="EndTime" value="Missing"/>
-                    <set var="VehicleType" value="Missing"/>
-                    <set var="StopsKnown" value="Missing"/>
-                    <set var="Stops" value="Missing"/>
+                    <set var="startSlot" value="Missing"/>
+                    <set var="startCity" value="Missing"/>
+                    <set var="startSlotToBeDefined" value="false"/>
+                    <set var="startDate" value="Missing"/>
+                    <set var="startTime" value="Missing"/>
+                    <set var="endSlot" value="Missing"/>
+                    <set var="endCity" value="Missing"/>
+                    <set var="endTimeKnown" value="Missing"/>
+                    <set var="endDate" value="Missing"/>
+                    <set var="endTime" value="Missing"/>
+                    <set var="vehicleType" value="Missing"/>
 
-                    <set var="NewInformation" value="[]"/>
+                    <set var="newInformation" value="[]"/>
                     <set var="a_m" value="ASK_START_SLOT"/>
                 </effect>
             </case>
@@ -542,13 +628,12 @@
                 <condition>
                     <if var="current_step" value="INFORMATION_RETRIEVAL"/>
                     <if var="a_m" value="FINAL_CONFIRM"/>
-                    <if var="NewInformation" relation="contains" value="UU"/>
+                    <if var="newInformation" relation="contains" value="UU"/>
 
-                    <if var="NewInformation" relation="!contains" value="Answer(true)"/>
-                    <if var="NewInformation" relation="!contains" value="Answer(false)"/>
+                    <if var="newInformation" relation="!contains" value="Answer(*)"/>
                 </condition>
                 <effect>
-                    <set var="NewInformation" value="[]"/>
+                    <set var="newInformation" value="[]"/>
                     <set var="a_m" value="FINAL_CONFIRM"/>
                 </effect>
             </case>

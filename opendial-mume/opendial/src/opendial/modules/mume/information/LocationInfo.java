@@ -28,7 +28,7 @@ public class LocationInfo {
         location = ner.stream().map(IndexedWord::originalText).collect(Collectors.joining(" "));
 
         wordList = ner;
-        /* IMPORTANT: there is a shift of +1 between IndexedWord.index() and TokensAnnotation's index */
+        /* IMPORTANT: IndexedWord's indeces and TokensAnnotation's indeces start from 1 */
         // tokenList = ner.stream().map(w -> tokens.get(w.index() - 1)).collect(Collectors.toList());
 
         // beginCharIndex = ner.get(0).beginPosition();
@@ -41,7 +41,7 @@ public class LocationInfo {
         boolean verbFound = false;
         while (!verbFound && pathToRootIterator.hasNext()) {
             IndexedWord currentParent = pathToRootIterator.next();
-            /* IMPORTANT: there is a shift of +1 between IndexedWord.index() and TokensAnnotation's index */
+            /* IMPORTANT: IndexedWord's indeces and TokensAnnotation's indeces start from 1 */
             CoreLabel currentToken = tokens.get(currentParent.index() - 1);
             if (currentToken.get(CoreAnnotations.PartOfSpeechAnnotation.class).equals("V")) {
                 verbFound = true;
@@ -54,7 +54,7 @@ public class LocationInfo {
             boolean modalFound = false;
             while (!modalFound && secondPathToRootIterator.hasNext()) {
                 IndexedWord currentParent = secondPathToRootIterator.next();
-                /* IMPORTANT: there is a shift of +1 between IndexedWord.index() and TokensAnnotation's index */
+                /* IMPORTANT: IndexedWord's indeces and TokensAnnotation's indeces start from 1 */
                 CoreLabel currentToken = tokens.get(currentParent.index() - 1);
                 String currentTokenPOS = currentToken.get(CoreAnnotations.PartOfSpeechAnnotation.class);
                 if (currentTokenPOS.equals("VM") || currentTokenPOS.equals("VA")) {
@@ -99,7 +99,7 @@ public class LocationInfo {
 
     public String getFirstVerbGovernorLemma() {
         if (firstVerbGovernorWord != null)
-            return firstVerbGovernorWord.lemma();
+            return firstVerbGovernorWord.lemma().toLowerCase();
         return "";
     }
 

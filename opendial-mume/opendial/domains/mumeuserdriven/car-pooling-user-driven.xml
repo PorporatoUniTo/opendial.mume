@@ -2,60 +2,71 @@
 <domain>
     <initialstate>
 
-        <!-- Starting prompt -->
+        <!-- starting prompt -->
         <variable id="u_m">
             <value>Benvenuti nel sistema di prenotazione automatico di MuMe!</value>
         </variable>
 
-        <variable id="StartSlot">
+        <variable id="startSlot">
             <value>Missing</value>
         </variable>
-        <variable id="StartCity">
+        <variable id="startSlotUnspecified">
             <value>Missing</value>
         </variable>
-        <variable id="StartLat">
+        <variable id="startAddress">
             <value>Missing</value>
         </variable>
-        <variable id="StartLon">
+        <variable id="startCity">
             <value>Missing</value>
         </variable>
-        <variable id="StartDate">
+        <variable id="startLat">
             <value>Missing</value>
         </variable>
-        <variable id="StartTime">
+        <variable id="startLon">
             <value>Missing</value>
         </variable>
-        <variable id="EndSlot">
+        <variable id="startDate">
             <value>Missing</value>
         </variable>
-        <variable id="EndCity">
+        <variable id="startTime">
             <value>Missing</value>
         </variable>
-        <variable id="EndLat">
+        <variable id="endSlot">
             <value>Missing</value>
         </variable>
-        <variable id="EndLon">
+        <variable id="endAddress">
             <value>Missing</value>
         </variable>
-        <variable id="EndTimeKnown">
+        <variable id="endCity">
             <value>Missing</value>
         </variable>
-        <variable id="EndDate">
+        <variable id="endLat">
             <value>Missing</value>
         </variable>
-        <variable id="EndTime">
+        <variable id="endLon">
             <value>Missing</value>
         </variable>
+        <variable id="endTimeKnown">
+            <value>Missing</value>
+        </variable>
+        <variable id="endDate">
+            <value>Missing</value>
+        </variable>
+        <variable id="endTime">
+            <value>Missing</value>
+        </variable>
+        <variable id="vehicleType">
+            <value>Missing</value>
+        </variable>
+        <!--
         <variable id="StopsKnown">
-            <value>Missing</value>
-        </variable>
-        <variable id="VehicleType">
             <value>Missing</value>
         </variable>
         <variable id="Stops">
             <value>[]</value>
         </variable>
-        <variable id="NewInformation">
+        -->
+        <variable id="newInformation">
             <value>[]</value>
         </variable>
 
@@ -65,21 +76,22 @@
         </variable>
         <!-- We start the dialogue by asking for the start slot -->
         <variable id="a_m">
-            <value>ASK_START_SLOT</value>
-            <!-- <value>ASK_START_CITY_CONFIRM</value> -->
-            <!-- <value>ASK_START_TIME</value> -->
-            <!-- <value>ASK_END_SLOT</value> -->
-            <!-- <value>ASK_END_SLOT_MORE</value> -->
-            <!-- <value>SLOT_ERROR_UPDATE</value> -->
+            <value>ASK_START_TIME</value>
+            <!-- <value>ASK_START_TIME_MORE</value> -->
             <!-- <value>ASK_END_TIME</value> -->
             <!-- <value>ASK_END_TIME_MORE</value> -->
+            <!-- <value>ASK_START_SLOT</value> -->
+            <!-- <value>ASK_START_CITY_CONFIRM</value> -->
+            <!-- <value>ASK_END_SLOT</value> -->
+            <!-- <value>ASK_END_SLOT_MORE</value> -->
+            <!-- <value>ASK_END_CITY_CONFIRM</value> -->
             <!-- <value>ASK_VEHICLE_TYPE</value> -->
             <!-- <value>ASK_VEHICLE_TYPE_MORE</value> -->
-            <!-- <value>ASK_STOPS</value> -->
-            <!-- <value>ASK_STOPS_MORE</value> -->
             <!-- <value>FINAL_CONFIRM</value> -->
             <!-- <value>SEND_REQUEST</value> -->
             <!-- <value>OUTCOME_COMMUNICATION</value> -->
+
+            <!-- <value>SLOT_ERROR_UPDATE</value> -->
         </variable>
 
     </initialstate>

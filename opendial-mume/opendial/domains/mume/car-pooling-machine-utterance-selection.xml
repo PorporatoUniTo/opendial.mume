@@ -43,6 +43,7 @@
                 </effect>
             </case>
         </rule>
+        <!--
         <rule>
             <case>
                 <condition>
@@ -57,6 +58,8 @@
                 </effect>
             </case>
         </rule>
+        -->
+        <!--
         <rule>
             <case>
                 <condition>
@@ -71,6 +74,7 @@
                 </effect>
             </case>
         </rule>
+        -->
         <!--
         <rule>
             <case>
@@ -96,7 +100,7 @@
                 </condition>
                 <effect util="2">
                     <set var="a_m-prev" value="{a_m}"/>
-                    <set var="u_m" value="A che ora vuoi partire?"/>
+                    <set var="u_m" value="Quando vuoi partire?"/>
                     <set var="a_m" value="RETRIEVE_INFORMATION"/>
                 </effect>
             </case>
@@ -131,8 +135,7 @@
                 </condition>
                 <effect util="10">
                     <set var="u_m" value="Ricapitolando: vuoi partire il {startDate} alle {startTime}
-                        da {cityIndexedWords}, {startSlot} con un veicolo {vehicleType} e posarlo il {endDate} alle {endTime}
-                         a {endSlot}, {endCity}. Giusto?"/>
+                        da {startSlot} a {startCity} con un veicolo {vehicleType} e posarlo il {endDate} alle {endTime} a {endSlot} a {endCity}. Giusto?"/>
                     <set var="a_m" value="WAIT_CONFIRM"/>
                 </effect>
             </case>

@@ -1,6 +1,7 @@
 package opendial.modules.mumeuserdriven;
 
 import com.google.gson.JsonArray;
+import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 import edu.stanford.nlp.ling.CoreAnnotations;
 import edu.stanford.nlp.ling.CoreLabel;
@@ -14,10 +15,8 @@ import opendial.DialogueState;
 import opendial.DialogueSystem;
 import opendial.modules.Module;
 
-import java.io.BufferedReader;
-import java.io.File;
-import java.io.IOException;
-import java.io.InputStreamReader;
+import java.io.*;
+import java.net.MalformedURLException;
 import java.net.URL;
 import java.net.URLConnection;
 import java.net.URLEncoder;
@@ -25,9 +24,9 @@ import java.nio.charset.StandardCharsets;
 import java.time.ZonedDateTime;
 import java.util.*;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
-import static opendial.modules.mumeuserdriven.Config.LOG4J_CONFIG;
-import static opendial.modules.mumeuserdriven.Config.TINT_CONFIG;
+import static opendial.modules.mumeuserdriven.Config.*;
 import static opendial.modules.mumeuserdriven.Shared.*;
 
 /**
@@ -52,13 +51,27 @@ public class CarPoolingInformationExtraction implements Module {
     /*
     // HeidelTime
     HeidelTimeStandalone haidelTime;
-
-    // Google Goecoding
-    GeoApiContext geoContext;
     */
 
+    // Google Goecoding
+    private Properties localGoogleMapsAPIPropeties;
+    private String[] macAddresses;
+    private String[] channels;
+    // private GeoApiContext geoContext;    // Client-side library
+
     // Tint
-    TintPipeline pipeline;
+    private TintPipeline pipeline;
+
+    private enum TemporalModifier {
+        MORNING("mattina", "mattino"),
+        EVENING("pomeriggio", "sera", "notte");
+
+        Set<String> texts;
+
+        TemporalModifier(String... t) {
+            this.texts = new HashSet<>(Arrays.asList(t));
+        }
+    }
 
     /**
      * Creates a new instance of the flight-booking module
@@ -70,7 +83,7 @@ public class CarPoolingInformationExtraction implements Module {
     }
 
     /**
-     * Starts the module.
+     * starts the module.
      */
     @Override
     public void start() {
@@ -89,14 +102,42 @@ public class CarPoolingInformationExtraction implements Module {
                 DocumentType.COLLOQUIAL,
                 OutputType.TIMEML,
                 HEIDELTIME_CONFIG,
-                POSTagger.TREETAGGER
+                TREETAGGER
                 //true
         );
+        */
 
+
+        /*===== CAUTION =====*/
+        localGoogleMapsAPIPropeties = new Properties();
+        try (BufferedReader googlePropertiesReader = new BufferedReader(new InputStreamReader(new FileInputStream(GOOGLE_MAPS_API_CONFIG)))) {
+            localGoogleMapsAPIPropeties.load(googlePropertiesReader);
+        } catch (FileNotFoundException fNFE) {
+            log.severe("The attemp to use non-local Google API properties has failed.");
+            fNFE.printStackTrace();
+        } catch (IOException ex) {
+            ex.printStackTrace();
+        }
+
+        String[] macPortsPairs = localGoogleMapsAPIPropeties.getProperty("mac.address").split(";");
+        if (macPortsPairs.length > 0) {
+            macAddresses = new String[macPortsPairs.length];
+            channels = new String[macPortsPairs.length];
+            for (int i = 0; i < macPortsPairs.length; i++) {
+                String[] temp = macPortsPairs[i].split(",");
+                macAddresses[i] = temp[0];
+                channels[i] = temp[1];
+            }
+        } else
+            log.severe("Failed to load 'mac.address' property.");
+        /*===================*/
+
+        /*
+        // Client-side library
         geoContext = new GeoApiContext.Builder()
-                .apiKey("xxx")
+                .apiKey(localGoogleMapsAPIPropeties.getProperty("google.api.key"))
                 .maxRetries(3)
-                .retryTimeout(3, TimeUnit.SECONDS)
+                .retryTimeout(2, TimeUnit.SECONDS)
                 .build();
         */
 
@@ -140,21 +181,21 @@ public class CarPoolingInformationExtraction implements Module {
             String userUtterance = state.queryProb("u_u").getBest().toString();
             String machineIntent = state.queryProb("a_m").getBest().toString();
             log.info("\n");
+            log.info(system.getState().getChanceNodes().toString());
             log.info("Machine Action:\t" + machineIntent);
-            log.info("NewInformation:\t" + state.queryProb("NewInformation").getBest().toString());
-            log.info("StartSlot:\t" + state.queryProb("StartSlot").getBest().toString());
-            log.info("StartCity:\t" + state.queryProb("StartCity").getBest().toString());
-            log.info("StartLat:\t" + state.queryProb("StartLat").getBest().toString());
-            log.info("StartLon:\t" + state.queryProb("StartLon").getBest().toString());
-            log.info("StartDate:\t" + state.queryProb("StartDate").getBest().toString());
-            log.info("StartTime:\t" + state.queryProb("StartTime").getBest().toString());
-            log.info("EndSlot:\t" + state.queryProb("EndSlot").getBest().toString());
-            log.info("EndCity:\t" + state.queryProb("EndCity").getBest().toString());
-            log.info("EndTimeKnown:\t" + state.queryProb("EndTimeKnown").getBest().toString());
-            log.info("EndDate:\t" + state.queryProb("EndDate").getBest().toString());
-            log.info("EndTime:\t" + state.queryProb("EndTime").getBest().toString());
-            log.info("StopsKnown:\t" + state.queryProb("StopsKnown").getBest().toString());
-            log.info("Stops:\t" + state.queryProb("Stops").getBest().toString());
+            log.info("newInformation:\t" + state.queryProb("newInformation").getBest().toString());
+            log.info("startSlot:\t" + state.queryProb("startSlot").getBest().toString());
+            log.info("startCity:\t" + state.queryProb("startCity").getBest().toString());
+            log.info("startSlotUnspecified:\t" + state.queryProb("startSlotUnspecified").getBest().toString());
+            log.info("startLat:\t" + state.queryProb("startLat").getBest().toString());
+            log.info("startLon:\t" + state.queryProb("startLon").getBest().toString());
+            log.info("startDate:\t" + state.queryProb("startDate").getBest().toString());
+            log.info("startTime:\t" + state.queryProb("startTime").getBest().toString());
+            log.info("endSlot:\t" + state.queryProb("endSlot").getBest().toString());
+            log.info("endCity:\t" + state.queryProb("endCity").getBest().toString());
+            log.info("endTimeKnown:\t" + state.queryProb("endTimeKnown").getBest().toString());
+            log.info("endDate:\t" + state.queryProb("endDate").getBest().toString());
+            log.info("endTime:\t" + state.queryProb("endTime").getBest().toString());
 
             /*
             // Informations
@@ -257,7 +298,7 @@ public class CarPoolingInformationExtraction implements Module {
             SemanticGraph dependencies = sentences.get(0).get(SemanticGraphCoreAnnotations.EnhancedPlusPlusDependenciesAnnotation.class);
             */
 
-            List<List<IndexedWord>> locationAnnotations = new ArrayList<>();
+            // List<List<IndexedWord>> locationAnnotations = new ArrayList<>();
             List<List<IndexedWord>> dateAnnotations = new ArrayList<>();
             List<List<IndexedWord>> timeAnnotations = new ArrayList<>();
             List<List<IndexedWord>> durationAnnotations = new ArrayList<>();
@@ -275,9 +316,11 @@ public class CarPoolingInformationExtraction implements Module {
                 if (inNER && !nerType.equals(currentNERType)) {
                     // The current NER is complete
                     switch (currentNERType) {
+                        /*
                         case "LOC":
                             locationAnnotations.add(currentNERIndexedWords);
                             break;
+                        */
                         case "DATE":
                             dateAnnotations.add(new ArrayList<>(currentNERIndexedWords));
                             break;
@@ -304,142 +347,406 @@ public class CarPoolingInformationExtraction implements Module {
                     currentNERIndexedWords.add(dependencies.getNodeByIndex(token.index()));
             }
 
-            List<List<IndexedWord>> cities = new ArrayList<>();
+            List<Slot> slots = new ArrayList<>();
+            List<City> cities = new ArrayList<>();
             List<List<IndexedWord>> addresses = new ArrayList<>();
 
-            partitionLocation(locationAnnotations, cities, addresses, tokens, dependencies);
+            partitionLocation(tokens, dependencies, addresses, slots, cities);
+
+            log.info("Slots:\t" + slots.stream().map(Slot::toString).collect(Collectors.joining(",\n", "[", "]")));
+            log.info("Cities:\t" + cities.stream().map(City::toString).collect(Collectors.joining(",\n", "[", "]")));
+            log.info("Addresses:\t" + addresses.stream().map(a -> a.stream().map(IndexedWord::originalText).collect(Collectors.joining(" "))).collect(Collectors.joining(",\n", "[", "]")));
 
             List<String> processedVehicleTypeAnnotation = new ArrayList<>();
             List<String> processedLocationAnnotations = new ArrayList<>();
             List<String> processedTimeAnnotations = new ArrayList<>();
             List<String> errors = new ArrayList<>();
 
-            if (machineIntent.contains("SLOT") || machineIntent.contains("CITY")) {
-                if (addresses.size() == 1) {
-                    String city = "";
-                    boolean inferredCity = false;
-                    if (cities.size() == 1)
-                        city = cities.get(0).stream().map(IndexedWord::originalText).collect(Collectors.joining(" "));
-                    else
-                        for (Map.Entry<String, List<String>> cityAddresses : CITIES_ADDRESSES.entrySet())
-                            if (cityAddresses.getValue().contains(addresses.get(0).stream().map(IndexedWord::originalText).collect(Collectors.joining(" ")))) {
-                                city = cityAddresses.getKey();
-                                inferredCity = true;
-                            }
-
-                    if (!city.isEmpty()) {
-                        String address = addresses.get(0).stream().map(IndexedWord::originalText).collect(Collectors.joining(" "));
-                        JsonParser parser = new JsonParser();
-                        String nominatimResponse = getNominatimJSON(address + " " + city);
-
-                        JsonArray locations = (JsonArray) parser.parse(nominatimResponse);
-                        if (locations.size() > 0) {
-                            processedLocationAnnotations.add("Slot(" + address + ")");
-                            processedLocationAnnotations.add(((inferredCity) ? "InferredCity(" : "City(") + city + ")");
-                            processedLocationAnnotations.add("Lat(" + locations.get(0).getAsJsonObject().get("lat").getAsString()
-                                    /* Avoids characters problems */
-                                    .replace(".", "_") + ")");
-                            processedLocationAnnotations.add("Lon(" + locations.get(0).getAsJsonObject().get("lon").getAsString()
-                                    /* Avoids characters problems */
-                                    .replace(".", "_") + ")");
-                        }
-                    }
-                } else if (cities.size() == 1 && addresses.isEmpty()) {
-                    String city = cities.get(0).stream().map(IndexedWord::originalText).collect(Collectors.joining(" "));
-                    String address = CITIES_ADDRESSES.get(city).get(
-                            (machineIntent.contains("START")) ? 0 : CITIES_ADDRESSES.get(city).size() - 1
-                    );
-                    JsonParser parser = new JsonParser();
-                    String nominatimResponse = getNominatimJSON(address + " " + city);
-
-                    JsonArray locations = (JsonArray) parser.parse(nominatimResponse);
-                    if (locations.size() > 0) {
-                        processedLocationAnnotations.add("Slot(" + address + ")");
-                        processedLocationAnnotations.add("City(" + city + ")");
-                        processedLocationAnnotations.add("Lat(" + locations.get(0).getAsJsonObject().get("lat").getAsString()
-                                /* Avoids characters problems */
-                                .replace(".", "_") + ")");
-                        processedLocationAnnotations.add("Lon(" + locations.get(0).getAsJsonObject().get("lon").getAsString()
-                                /* Avoids characters problems */
-                                .replace(".", "_") + ")");
-                    }
-                } /* else
-                    processedLocationAnnotations.add("City(" + cities.get(0).stream().map(IndexedWord::originalText).collect(Collectors.joining(" ")) + ")");
-                    */
-            } else {
-                cities.forEach(c -> {
-                    String city = c.stream().map(IndexedWord::originalText).collect(Collectors.joining(" "));
-                    processedLocationAnnotations.add("City(" + city + ")");
-                });
-                addresses.forEach(a -> {
-                    String sddress = a.stream().map(IndexedWord::originalText).collect(Collectors.joining(" "));
-                    processedLocationAnnotations.add("Address(" + sddress + ")");
-                });
-            }
-
+            /* TIME AND DATE */
             ZonedDateTime now = ZonedDateTime.now();
             if (machineIntent.contains("TIME")) {
+                String date = "";
+                String time = "";
                 if (timeAnnotations.size() == 1) {
-                    String date = "";
                     if (dateAnnotations.size() == 1) {
                         String currentDate = dateAnnotations.get(0).get(0).get(CoreAnnotations.NormalizedNamedEntityTagAnnotation.class).split("T")[0];
                         if (!currentDate.equals("XXXX-XX-XX"))
                             date = currentDate;
                     }
                     if (date.isEmpty()) {
-                        if (machineIntent.contains("END") && state.hasChanceNode("StartDate")) {
-                            date = state.queryProb("StartDate").getBest().toString();
+                        if (machineIntent.contains("END")) {
+                            // start date should already has been setted (?)
+                            date = state.queryProb("startDate").getBest().toString();
                         } else {
-                            date = now.getYear() + "-" +
-                                    ((now.getMonthValue() < 10) ? "0" + now.getMonthValue() : now.getMonthValue()) + "-" +
-                                    ((now.getDayOfMonth() < 10) ? "0" + now.getDayOfMonth() : now.getDayOfMonth());
+                            date = String.format("%04d-%02d-%02d", now.getYear(), now.getMonthValue(), now.getDayOfMonth());
                         }
                     }
 
+
                     // FIXME check time corrections
-                    // TODO add recap to the confirmation question
-                    String time;
-                    // TODO check the methodology: minutes in letters are a problem?
+                    // FIXME minutes in letters are a problem
                     boolean timeInLetters = !timeAnnotations.get(0).stream().map(IndexedWord::originalText).collect(Collectors.joining(" ")).matches("[^\\d]*\\d+[^\\d]*");
 
                     log.info("Time in letters:\t" + timeInLetters);
 
-                    String[] newTimeFields = timeAnnotations.get(0).get(0).get(CoreAnnotations.NormalizedNamedEntityTagAnnotation.class).split("T")[1].split(":");
+                    IndexedWord timeWord = timeAnnotations.get(0).get(0);
+                    String[] newTimeFields = timeWord.get(CoreAnnotations.NormalizedNamedEntityTagAnnotation.class).split("T")[1].split(":");
                     if (machineIntent.contains("START")) {
-                        time = (Integer.parseInt(newTimeFields[0]) +
-                                ((timeInLetters &&
-                                        Integer.parseInt(date.split("-")[2]) == now.getDayOfMonth() &&
-                                        Integer.parseInt(newTimeFields[0]) < now.getHour()) ? 12 : 0)
-                        ) + ":" + newTimeFields[1];
-                    } else if (machineIntent.contains("END") &&
-                            state.hasChanceNode("StartTime")) {
-                        String startHour = state.queryProb("StartTime").getBest().toString().split("-")[0];
-                        time = (Integer.parseInt(newTimeFields[0]) +
-                                ((timeInLetters && Integer.parseInt(newTimeFields[0]) <= Integer.parseInt(startHour)) ? 12 : 0)
-                        ) + ":" + newTimeFields[1];
-                    } // Superfluos, just for Java variable initialization's policy
-                    else
-                        time = newTimeFields[0] + ":" + newTimeFields[1];
+                        time = String.format("%02d:%02d",
+                                (Integer.parseInt(newTimeFields[0]) +
+                                        ((timeInLetters &&
+                                                (Integer.parseInt(date.split("-")[2]) == now.getDayOfMonth() &&
+                                                        Integer.parseInt(newTimeFields[0]) < now.getHour()) ||
+                                                (hasTemporalSpecification(timeWord, dependencies, TemporalModifier.EVENING))) ? 12 : 0)
+                                ),
+                                roundToPreviousQuarter(Integer.parseInt(newTimeFields[1])));
+                    } else if (machineIntent.contains("END")) {
+                        int roundedMinutes = roundToPreviousQuarter(Integer.parseInt(newTimeFields[1]));
+                        if (roundedMinutes != Integer.parseInt(newTimeFields[1]))
+                            roundedMinutes += QUARTER;
+                        // start time should already has been setted
+                        String startHour = state.queryProb("startTime").getBest().toString().split("-")[0];
+                        time = String.format("%02d:%02d",
+                                (Integer.parseInt(newTimeFields[0]) +
+                                        ((timeInLetters && Integer.parseInt(newTimeFields[0]) <= Integer.parseInt(startHour)) ? 12 : 0) +
+                                        // If the minutes has been rounded for excess, it may be necessary increment the hour too
+                                        roundedMinutes / HOUR
+                                ),
+                                (roundedMinutes % HOUR));
+                    }
+                } else if (checkForNowAnswer(tokens)) {
+                    int roundedMinutes = roundToPreviousQuarter(now.getMinute());
+                    boolean incHour = false;
+                    if (machineIntent.contains("END")) {
+                        roundedMinutes += QUARTER;
+                        // Correct order
+                        incHour = roundedMinutes / HOUR > 0;
+                        roundedMinutes = roundedMinutes % HOUR;
+                    }
+                    time = String.format("%02d:%02d", (incHour) ? now.getHour() + 1 : now.getHour(), roundedMinutes);
+                    date = String.format("%04d-%02d-%02d", now.getYear(), now.getMonthValue(), now.getDayOfMonth());
+                }
 
-
+                if (!time.isEmpty())
                     processedTimeAnnotations.add("Time(" + time
                             /* Avoids characters problems */
                             .replace(':', '-') +
                             ")");
+                if (!date.isEmpty())
                     processedTimeAnnotations.add("Date(" + date + ")");
-                }
-            }
+            }   /* time and date END */
 
+
+            /* SLOT, GOOGLE_API_ADDRESS AND CITY */
+            boolean floatingStartSlot = (state.hasChanceNode("startSlotUnspecified") &&
+                    !state.queryProb("startSlotUnspecified").getBest().toString().equals(NONE)) ?
+                    Boolean.valueOf(state.queryProb("startSlotUnspecified").getBest().toString()) :
+                    true;
+            if (machineIntent.contains("SLOT")) {
+                /* to check if not empty */
+                String slot = "";
+                List<Slot> sortedSlots = new ArrayList<>();
+                String address = "";
+                String city = "";
+                double lat = -100.0;
+                double lon = -200.0;
+                /* The user did not specified a city, so the 'city' variable's value has been inffered by the system */
+                boolean inferredCity = false;
+
+                JsonParser parser = new JsonParser();
+
+                // String userCurrentPosition = getCurrentUserPosition(parser);
+                // TESTING: Dipartimento di Informatica
+                String userCurrentPosition = "45.08914,7.6560533";
+                log.info("Current User Position:\t" + userCurrentPosition);
+                String[] userPositions = userCurrentPosition.split(",");
+
+                /* If the user knows the name of the parking slot and give it, no need of Google */
+                if (!slots.isEmpty()) {
+                    /*
+                    // Sort the slots given by the user (hopefully just one)...
+                    sortedSlots = slots.stream()
+                            // ... by distance from the user's current position
+                            .sorted((s1, s2) -> {
+                                double latDiff1 = Double.parseDouble(userPositions[0]) - s1.getLatitude();
+                                double lonDiff1 = Double.parseDouble(userPositions[1]) - s1.getLongitude();
+                                double latDiff2 = Double.parseDouble(userPositions[0]) - s2.getLatitude();
+                                double lonDiff2 = Double.parseDouble(userPositions[1]) - s2.getLongitude();
+                                return Double.compare(Math.sqrt(latDiff1 * latDiff1 + lonDiff1 * lonDiff1), Math.sqrt(latDiff2 * latDiff2 + lonDiff2 * lonDiff2));
+                            }).collect(Collectors.toList());
+                    */
+
+                    sortedSlots = sortSlots(slots, false, "", userPositions[0], userPositions[1]);
+
+                    // Filter the slots based on the city explicitly communicated by the user
+                    // If the user comminicated a city,...
+                    if (cities.size() == 1) {
+                        city = cities.get(0).getName();
+                        inferredCity = false;
+
+                        // ... remove the slot that are not in that city
+                        String effectivelyFinalCity = city; // For stream purpuses
+                        sortedSlots = sortedSlots.stream().filter(s -> s.getCity().getName().equalsIgnoreCase(effectivelyFinalCity)).collect(Collectors.toList());
+                    }
+                    // ... else, just retrieve the (first) slot's one
+                    else if (!sortedSlots.isEmpty()) {
+                        city = sortedSlots.get(0).getCity().getName();
+                        // if there is some ambiguity in the city, signal it
+                        inferredCity = sortedSlots.size() > 1;
+                    }
+
+                    // If there is at least one slot in the city given by the user (or in general)...
+                    if (!sortedSlots.isEmpty()) {
+                        // Retrive all the informaiton!
+                        // Slot (1)
+                        slot = sortedSlots.get(0).getName();
+                        // Address (2)
+                        address = sortedSlots.get(0).getAddress();
+                        // City (3)
+                        // 'city' already set
+                        // InferredCity (4)
+                        // 'inferredCity' already set
+
+                        // Latitude (5)
+                        lat = sortedSlots.get(0).getLatitude();
+                        // Longitude (6)
+                        lon = sortedSlots.get(0).getLongitude();
+
+                        // SortedSlots (7)
+                        if (sortedSlots.size() > 1)
+                            sortedSlots = sortedSlots.subList(1, sortedSlots.size());
+                        else
+                            sortedSlots = new LinkedList<>();
+
+                        // UnspecifiedSlot (8)
+                        floatingStartSlot = false;
+                    } /*else
+                    errors.add("Error(" + "NoSlotFound" + ")");
+                    */
+                }
+                /* Else, if the user give an address, we can retrieve the nearest slot (or slots) */
+                else if (addresses.size() == 1) {
+                    // The user did not gave the precise slot
+                    floatingStartSlot = true;
+
+                    // Construct the partial address for Google to complete
+                    String toGoogleMaps = addresses.get(0).stream().map(IndexedWord::originalText).collect(Collectors.joining(" "));
+                    // If the user gave the city,...
+                    if (cities.size() == 1) {
+                        // ... retrieve it ...
+                        city = cities.get(0).getName();
+                        inferredCity = false;
+
+                        // ... and append to the address
+                        toGoogleMaps += " " + city;
+                    } else
+                        inferredCity = true;
+
+                    // JSON object for the complete address
+                    JsonObject queryCompletionResult = null;
+                    try {
+                        queryCompletionResult = parser.parse(getGoogleMapsResponseJSON(getMapsSearchURL(toGoogleMaps, userCurrentPosition), false, "")).getAsJsonObject();
+                        log.info("Response:\t" + queryCompletionResult.toString());
+                    } catch (MalformedURLException | NullPointerException exception) {
+                        exception.printStackTrace();
+                    }
+                    if (queryCompletionResult != null && queryCompletionResult.get("status").getAsString().equals("OK")) {
+                        JsonObject bestAddress = queryCompletionResult.get("candidates").getAsJsonArray().get(0).getAsJsonObject();
+                        address = bestAddress.get(COMPLETE_ADDRESS).getAsString();
+
+                        JsonObject location = bestAddress.getAsJsonObject().get("geometry")
+                                .getAsJsonObject().get("location").getAsJsonObject();
+
+                        if (city.isEmpty())
+                            try {
+                                JsonObject geoQueryResult = parser.parse(getGoogleMapsResponseJSON(getMapsReverseGeocodingURL(location.get(LATITUDE) + "," + location.get(LONGITUDE), GEOCODING_LOCALITY), false, "")).getAsJsonObject();
+                                if (geoQueryResult != null && geoQueryResult.get("status").getAsString().equals("OK") && geoQueryResult.get("results").getAsJsonArray().size() > 0) {
+                                    City geoCity = City.getByName(geoQueryResult.get(RESULTS).getAsJsonArray().get(0).getAsJsonObject().get(COMPONENTS).getAsJsonArray().get(0).getAsJsonObject().get(LONG_ADDRESS).getAsString().toLowerCase());
+                                    if (geoCity != null)
+                                        // Ciriè/e
+                                        city = geoCity.getName();
+                                }
+                            } catch (MalformedURLException excpetion) {
+                                excpetion.printStackTrace();
+                            }
+
+                        /*
+                        Stream<Slot> sortedSlotsStream = Arrays.stream(Slot.values()).filter(s -> {
+                            double latDiff = location.get("lat").getAsDouble() - s.getLatitude();
+                            double lonDiff = location.get("lng").getAsDouble() - s.getLongitude();
+                            return Math.sqrt(latDiff * latDiff + lonDiff * lonDiff) < DISTANCE_THRESHOLD;
+                        });
+                        // If the user gave the city, retain only the slot of that city
+                        if (!inferredCity) {
+                            String effectivelyFinalCity = city;
+                            sortedSlotsStream = sortedSlotsStream.filter(s -> s.getCity().name().equals(effectivelyFinalCity));
+                        }
+                        sortedSlots = sortedSlotsStream.sorted((s1, s2) -> {
+                            double latDiff1 = location.get("lat").getAsDouble() - s1.getLatitude();
+                            double lonDiff1 = location.get("lng").getAsDouble() - s1.getLongitude();
+                            double latDiff2 = location.get("lat").getAsDouble() - s2.getLatitude();
+                            double lonDiff2 = location.get("lng").getAsDouble() - s2.getLongitude();
+                            return Double.compare(Math.sqrt(latDiff1 * latDiff1 + lonDiff1 * lonDiff1), Math.sqrt(latDiff2 * latDiff2 + lonDiff2 * lonDiff2));
+                        }).collect(Collectors.toList());
+                        */
+
+                        sortedSlots = sortSlots(Arrays.asList(Slot.values()), true, ((!inferredCity) ? city : ""), location.get(LATITUDE).getAsString(), location.get(LONGITUDE).getAsString());
+
+                        if (!sortedSlots.isEmpty()) {
+                            // Slot (1)
+                            slot = sortedSlots.get(0).getName();
+                            // Address (2)
+                            // 'address' already set
+                            // City (3)
+                            // 'city' alteady set
+                            // InferredCity (4)
+                            // 'inferredCity' already set
+
+                            // Latitude (5)
+                            lat = location.get("lat").getAsDouble();
+                            // Lobgitude (6)
+                            lon = location.get("lng").getAsDouble();
+
+                            // SortedSlots (7)
+                            sortedSlots = sortedSlots.subList(1, sortedSlots.size());
+
+                            // UnspecifiedSlot (8)
+                            floatingStartSlot = true;
+                        }
+                    } /*else
+                    errors.add("Error(" + "NoSlotFound" + ")");
+                    */
+                }
+                /* Else, if the user communicate just the city, select the slot nearer to s/he position */
+                else if (cities.size() == 1 && addresses.isEmpty()) {
+                    // Retrieve the city gave by the user
+                    city = cities.get(0).getName();
+
+                    /*
+                    sortedSlots = Arrays.stream(Slot.values()).filter(s -> {
+                        double latDiff = Double.parseDouble(userPositions[0]) - s.getLatitude();
+                        double lonDiff = Double.parseDouble(userPositions[1]) - s.getLongitude();
+                        return Math.sqrt(latDiff * latDiff + lonDiff * lonDiff) < DISTANCE_THRESHOLD;
+                    }).filter(s -> s.getCity().name().equals(effectivelyFinalCity)).sorted((s1, s2) -> {
+                        double latDiff1 = Double.parseDouble(userPositions[0]) - s1.getLatitude();
+                        double lonDiff1 = Double.parseDouble(userPositions[1]) - s1.getLongitude();
+                        double latDiff2 = Double.parseDouble(userPositions[0]) - s2.getLatitude();
+                        double lonDiff2 = Double.parseDouble(userPositions[1]) - s2.getLongitude();
+                        return Double.compare(Math.sqrt(latDiff1 * latDiff1 + lonDiff1 * lonDiff1), Math.sqrt(latDiff2 * latDiff2 + lonDiff2 * lonDiff2));
+                    }).collect(Collectors.toList());
+                    */
+
+                    // Retains only the slot in the city specified by the user and sort them by the distance from the current position if the user
+                    sortedSlots = sortSlots(Arrays.asList(Slot.values()), true, city, userPositions[0], userPositions[1]);
+
+                    if (!sortedSlots.isEmpty()) {
+                        // Slot (1)
+                        slot = sortedSlots.get(0).getName();
+                        // Address (2)
+                        address = sortedSlots.get(0).getAddress();
+                        // City (3)
+                        // 'city' already set
+                        // InferredCity (4)
+                        inferredCity = false;
+                        // Latitude (5)
+                        lat = Double.parseDouble(userPositions[0]);
+                        // Longitude (6)
+                        lon = Double.parseDouble(userPositions[1]);
+                        // SortedSlots (7)
+                        sortedSlots = sortedSlots.subList(1, sortedSlots.size());
+                        // UnspecifiedSlot (8)
+                        floatingStartSlot = true;
+                    } /*else
+                    errors.add("Error(" + "NoSlotFound" + ")");
+                    */
+                }
+                /* Otherwise, select the nearest slot to the current position of th user if s/he indicate that wants to start from there */
+                else if (hereAnswer(tokens)) {
+                    // Retrive the address and the city of the current user postion
+                    try {
+                        JsonObject currentUserAddress = parser.parse(getGoogleMapsResponseJSON(getMapsReverseGeocodingURL(userCurrentPosition, GEOCODING_LOCALITY), false, "")).getAsJsonObject();
+                        if (currentUserAddress != null && currentUserAddress.get("status").getAsString().equals("OK") && currentUserAddress.get("results").getAsJsonArray().size() > 0) {
+                            JsonObject bestResult = currentUserAddress.get(RESULTS).getAsJsonArray().get(0).getAsJsonObject();
+                            address = bestResult.get(COMPLETE_ADDRESS).getAsString();
+                            city = bestResult.get(COMPONENTS).getAsJsonArray().get(0).getAsJsonObject().get(LONG_ADDRESS).getAsString();
+                            // Do not ask confirmation about the city, the user does not care
+                            inferredCity = false;
+                        }
+                    } catch (MalformedURLException excpetion) {
+                        excpetion.printStackTrace();
+                    }
+                    // Do not filter by city, the user did not give that
+                    /*
+                    sortedSlots = Arrays.stream(Slot.values()).filter(s -> {
+                        double latDiff = Double.parseDouble(userPositions[0]) - s.getLatitude();
+                        double lonDiff = Double.parseDouble(userPositions[1]) - s.getLongitude();
+                        return Math.sqrt(latDiff * latDiff + lonDiff * lonDiff) < DISTANCE_THRESHOLD;
+                    }).sorted((s1, s2) -> {
+                        double latDiff1 = Double.parseDouble(userPositions[0]) - s1.getLatitude();
+                        double lonDiff1 = Double.parseDouble(userPositions[1]) - s1.getLongitude();
+                        double latDiff2 = Double.parseDouble(userPositions[0]) - s2.getLatitude();
+                        double lonDiff2 = Double.parseDouble(userPositions[1]) - s2.getLongitude();
+                        return Double.compare(Math.sqrt(latDiff1 * latDiff1 + lonDiff1 * lonDiff1), Math.sqrt(latDiff2 * latDiff2 + lonDiff2 * lonDiff2));
+                    }).collect(Collectors.toList());
+                    */
+
+                    sortedSlots = sortSlots(Arrays.asList(Slot.values()), true, "", userPositions[0], userPositions[1]);
+
+                    if (!sortedSlots.isEmpty()) {
+                        // Slot (1)
+                        slot = sortedSlots.get(0).getName();
+                        // Address (2)
+                        // 'address' already set
+                        // City (3)
+                        // 'city' already set
+                        // InferredCity (4)
+                        // 'inferredCity' already set
+                        // Latitude (5)
+                        lat = Double.parseDouble(userPositions[0]);
+                        // Latitude (6)
+                        lon = Double.parseDouble(userPositions[1]);
+                        // SortedSlots (7)
+                        sortedSlots = sortedSlots.subList(0, sortedSlots.size());
+                        // UnspecifiedSlot(8)
+                        floatingStartSlot = true;
+                    }
+                }
+
+                if (!slot.isEmpty()) {
+                    processedLocationAnnotations.add("Slot(" + slot + ")"); // 1
+                    processedLocationAnnotations.add("SortedSlotList(" + String.join(",", sortedSlots + ")"));  // 7
+                    processedLocationAnnotations.add("Address(" + address + ")");   // 2
+                    processedLocationAnnotations.add(((inferredCity) ? "InferredCity(" : "City(") + city + ")");    // 3 - 4
+                    processedLocationAnnotations.add("Lat(" + String.valueOf(lat)   // 5
+                            /* Avoids characters problems */
+                            .replace(".", "_") + ")");
+                    processedLocationAnnotations.add("Lon(" + String.valueOf(lon)   // 6
+                            /* Avoids characters problems */
+                            .replace(".", "_") + ")");
+                } /*else
+                    errors.add("Error(" + "NoSlotFound" + ")");
+                    */
+            } else if (machineIntent.contains("CITY") && cities.size() == 1)
+                processedLocationAnnotations.add("City(" + cities.get(0).getName() + ")");
+            /* slot, address and city END */
+
+
+            /* VEHICLE */
             if (machineIntent.contains("VEHICLE_TYPE")) {
                 for (Map.Entry<String, List<String>> vehicleTypeExpressions : VEHICLE_TYPES.entrySet())
                     for (String expression : vehicleTypeExpressions.getValue())
                         if (annotation.get(CoreAnnotations.TextAnnotation.class).contains(expression))
                             processedVehicleTypeAnnotation.add("VehicleType(" + vehicleTypeExpressions.getKey() + ")");
-            }
+            }   /* vehicle END */
+
+
+            log.info("New Location Info:\t" + processedLocationAnnotations.toString());
+            log.info("New Time Info:\t" + processedTimeAnnotations.toString());
+            log.info("New Vehicle Info:\t" + processedVehicleTypeAnnotation.toString());
 
 
             /* ERRORS DETECTION */
-            if (processedTimeAnnotations.size() > 0 &&
+            if (!processedTimeAnnotations.isEmpty() &&
                     machineIntent.contains("TIME")) {
                 String[] newDate = processedTimeAnnotations.stream().filter(d -> d.startsWith("Date")).findFirst().orElse("Date()")
                         .replace("Date(", "").replace(")", "").split("-");
@@ -461,9 +768,22 @@ public class CarPoolingInformationExtraction implements Module {
                                         Integer.parseInt(newDate[2]) == now.getDayOfMonth() &&
                                         Integer.parseInt(newTime[0]) < now.getHour() ||
                                 // the hour is invalid (greater than 23 or less than 0, due to the correction taking in account the start time)
+                                //  (this should not happen)
                                 Integer.parseInt(newTime[0]) > 23 || Integer.parseInt(newTime[0]) < 0) {
                     errors.add("Error(" + "PastTimeError" + ")");
                 }
+
+                /*
+                if (machineIntent.contains("END")) {
+                    String[] startDate = state.queryProb("startDate").getBest().toString()
+                            .replace("Date(", "").replace(")", "").split("-");
+                    String[] startTime = state.queryProb("startTime").getBest().toString()
+                            .replace("Time(", "").replace(")", "").split("-");
+                    // TODO check trip length error
+
+                    errors.add("Error(" + "TooShort" + ")");
+                }
+                */
             }
 
 
@@ -476,6 +796,9 @@ public class CarPoolingInformationExtraction implements Module {
             else if (checkForPositiveAnswer(tokens))
                 j.add("Answer(true)");
 
+            if (floatingStartSlot && machineIntent.contains("START"))   // 8
+                j.add("startSlotUnspecified");
+
             errors.forEach(j::add);
 
             /* Aknowledge the fact that the user as spoken! */
@@ -486,15 +809,41 @@ public class CarPoolingInformationExtraction implements Module {
             String newInformation = j.toString();
             log.info(newInformation);
 
-            system.addContent("NewInformation", newInformation);
+            system.addContent("newInformation", newInformation);
         }
+
+    }
+
+    private List<Slot> sortSlots(List<Slot> slots, boolean filterDistance, String filterCity, String biasLatitude, String biasLongitude) {
+        Stream<Slot> sortedSlotsStream = slots.stream();
+
+        // Filter by distance from the specified start point (if the slot was not given)
+        if (filterDistance)
+            sortedSlotsStream = sortedSlotsStream.filter(s -> {
+                double latDiff = Double.parseDouble(biasLatitude) - s.getLatitude();
+                double lonDiff = Double.parseDouble(biasLongitude) - s.getLongitude();
+                return Math.sqrt(latDiff * latDiff + lonDiff * lonDiff) < DISTANCE_THRESHOLD;
+            });
+
+        // ... and by city, if any was given;
+        if (!filterCity.isEmpty())
+            sortedSlotsStream = sortedSlotsStream.filter(s -> s.getCity().name().equalsIgnoreCase(filterCity));
+
+        // then sort by distance from the specified start point and return
+        return sortedSlotsStream.sorted((s1, s2) -> {
+            double latDiff1 = Double.parseDouble(biasLatitude) - s1.getLatitude();
+            double lonDiff1 = Double.parseDouble(biasLongitude) - s1.getLongitude();
+            double latDiff2 = Double.parseDouble(biasLatitude) - s2.getLatitude();
+            double lonDiff2 = Double.parseDouble(biasLongitude) - s2.getLongitude();
+            return Double.compare(Math.sqrt(latDiff1 * latDiff1 + lonDiff1 * lonDiff1), Math.sqrt(latDiff2 * latDiff2 + lonDiff2 * lonDiff2));
+        }).collect(Collectors.toList());
     }
 
     /**
      * Recognise the presence of a positive answer (e.g.: 'yes').
      *
-     * @param tokens
-     * @return
+     * @param tokens the List<IndexedWord> of the user utterance
+     * @return true if the user uttarance contains a clue of a positive answer, false otherwise
      */
     private boolean checkForPositiveAnswer(List<CoreLabel> tokens) {
         for (CoreLabel token : tokens)
@@ -506,8 +855,8 @@ public class CarPoolingInformationExtraction implements Module {
     /**
      * Recognise the presence of a negative answer (e.g.: 'no').
      *
-     * @param tokens
-     * @return
+     * @param tokens the List<IndexedWord> of the user utterance
+     * @return true if the user uttarance contains a clue of a negative answer, false otherwise
      */
     private boolean checkForNegativeAnswer(List<CoreLabel> tokens) {
         for (CoreLabel token : tokens)
@@ -516,22 +865,159 @@ public class CarPoolingInformationExtraction implements Module {
         return false;
     }
 
+    /**
+     * Recognise the time indication corresponding to the 'now' time (e.g.: 'adesso').
+     *
+     * @param tokens the List<IndexedWord> of the user utterance
+     * @return true if the user uttarance contains a clue of the 'now' time, false otherwise
+     */
+    private boolean checkForNowAnswer(List<CoreLabel> tokens) {
+        for (CoreLabel token : tokens)
+            if (nowAnswers.contains(token.originalText()))
+                return true;
+        return false;
+    }
+
+    /**
+     * Recognise the time indication corresponding to the 'here' location (e.g.: 'qui', 'dove mi trovo adesso').
+     *
+     * @param tokens the List<IndexedWord> of the user utterance
+     * @return true if the user uttarance contains a clue of the 'here' place, false otherwise
+     */
+    private boolean hereAnswer(List<CoreLabel> tokens) {
+        for (CoreLabel token : tokens)
+            if (hereAnswers.contains(token.originalText()))
+                return true;
+        return false;
+    }
+
+    /**
+     * Return the set of slots whose address match at least partilly with the one given by the user.
+     * <p>
+     * This methods check if the given address corresponds to one of the address of same slot.
+     * Each slot may have other addresses besides that the platform default, like the original address or those retrieved by Google.
+     *
+     * @param address the String of the address communicated by the user
+     * @return the Set<Slot> of the Slot for which at least one address (partially) matches with the user given one
+     */
+    private Set<Slot> partialMatchWithSlotAddress(List<IndexedWord> address) {
+        // TODO implement
+        Set<Slot> toReturn = new HashSet<>();
+        Set<String> addressSet = address.stream().map(t -> t.originalText().toLowerCase()).collect(Collectors.toSet());
+        for (Slot slot : Slot.values())
+            for (String slotAddress : slot.getAddresses()) {
+                Set<String> addressParts = Arrays.stream(slotAddress.split(" ")).map(s -> s.toLowerCase().replace(",", "")).collect(Collectors.toSet());
+                if (addressParts.containsAll(addressSet))
+                    toReturn.add(slot);
+            }
+        return toReturn;
+    }
 
     /**
      * Separates cities' NERs from addresses' NERs.
      *
-     * @param locationNERs the Lis<List<IndexedWord>> of NERs found in the (corrected) user utterance
-     * @param cities       the (to-be-filled) List<LocationInfo> of cities' NERs
+     * @param tokens       the List<IndexedWord> of tokens found in the (corrected) user utterance
+     * @param dependencies the SemanticGraph of the user utterance's dependencies
      * @param addresses    the (to-be-filled) List<LocationInfo> of addresses' NERs
+     * @param slots        the (to-be-filled) List<LocationInfo> of slots' NERs
+     * @param cities       the (to-be-filled) List<LocationInfo> of cities' NERs
      */
-    private void partitionLocation(List<List<IndexedWord>> locationNERs, List<List<IndexedWord>> cities, List<List<IndexedWord>> addresses, List<CoreLabel> tokens, SemanticGraph dependencies) {
-        for (List<IndexedWord> location : locationNERs) {
-            String locationText = location.stream().map(IndexedWord::originalText).collect(Collectors.joining(" "));
-            if (CITIES.stream().map(String::toLowerCase).collect(Collectors.toList()).contains(locationText.toLowerCase()))
-                cities.add(location);
-            else {
-                addresses.add(location);
+    private void partitionLocation(List<CoreLabel> tokens, SemanticGraph dependencies, List<List<IndexedWord>> addresses, List<Slot> slots, List<City> cities) {
+        Set<Integer> indexToCheck = tokens.stream().map(CoreLabel::index).collect(Collectors.toSet());
+
+        // ADDRESSES
+        for (CoreLabel token : tokens) {
+            // if the token is a address cleu (e.g. 'piazza'),...
+            if (indexToCheck.contains(token.index()) &&
+                    ADDRESS_CLUE.contains(token.originalText().toLowerCase())) {
+                IndexedWord tokenIndexedWord = dependencies.getNodeByIndexSafe(token.index());
+                List<IndexedWord> subGraph = new ArrayList<>(Collections.singletonList(tokenIndexedWord));
+                // Retrieve parent, siblings and children of the clue token, if any, ...
+                IndexedWord parent = dependencies.getParent(tokenIndexedWord);
+                if (parent != null)
+                    subGraph.add(parent);
+                Collection<IndexedWord> siblings = dependencies.getSiblings(tokenIndexedWord);
+                if (siblings != null && !siblings.isEmpty())
+                    subGraph.addAll(siblings);
+                Collection<IndexedWord> children = dependencies.getChildren(tokenIndexedWord);
+                if (children != null && children.isEmpty())
+                    subGraph.addAll(children);
+                // ... and sort them by index
+                List<IndexedWord> sortedSubGraph = subGraph.stream().sorted(Comparator.comparing(IndexedWord::index)).collect(Collectors.toList());
+                log.info("Sorted subgraph:\t" + sortedSubGraph);
+                // sortedSubGraph is not empty: there is al least the clue token in exam
+
+                // Filter: retain only the tokens in a contunuus sequence
+                List<IndexedWord> address = new LinkedList<>();
+                // drop th tokens before the clue token
+                boolean stop = false;
+                Iterator<IndexedWord> tokensIterator = sortedSubGraph.iterator();
+                IndexedWord currentToken = null;
+                // Skip tokens before the clue token
+                int currentIndex = token.index();
+                do {
+                    if (currentToken != null)
+                        log.info("Skipping: " + currentToken.originalText());
+                    currentToken = tokensIterator.next();
+                    if (currentToken.index() >= currentIndex)
+                        stop = true;
+                } while (tokensIterator.hasNext() && !stop);
+                // Add to the final address only the chain of token without interruption
+                address.add(currentToken);
+                currentIndex = currentToken.index();
+                stop = false;
+                while (tokensIterator.hasNext() && !stop) {
+                    currentToken = tokensIterator.next();
+                    if (currentToken.index() == currentIndex + 1) {
+                        address.add(currentToken);
+                        currentIndex++;
+                    } else
+                        stop = true;
+                }
+
+                // Remove from the checklist the extracted token
+                indexToCheck.removeAll(address.stream().map(IndexedWord::index).collect(Collectors.toSet()));
+
+                log.info("Address: " + address.stream().map(IndexedWord::originalText).collect(Collectors.joining(" ")));
+                addresses.add(address);
             }
+        }
+
+        // CITIES
+        for (City city : City.values())
+            for (int i = 0; i < tokens.size() - city.getNumberOfWords(); i++) {
+                if (indexToCheck.contains(tokens.get(i).index())) {
+                    List<CoreLabel> cityTokens = tokens.subList(i, i + city.getNumberOfWords());
+                    if (cityTokens.stream().map(CoreLabel::originalText).collect(Collectors.joining(" ")).equalsIgnoreCase(city.getName())) {
+                        cities.add(city);
+                        indexToCheck.removeAll(cityTokens.stream().map(CoreLabel::index).collect(Collectors.toSet()));
+                    }
+                }
+            }
+        if (cities.isEmpty() && !addresses.isEmpty()) {
+            for (List<IndexedWord> foundAddress : addresses) {
+                City extractedCity = City.extractFromAddress(foundAddress);
+                if (extractedCity != null)
+                    cities.add(extractedCity);
+            }
+        }
+
+        // SLOTS
+        for (Slot slot : Slot.values())
+            for (int i = 0; i < tokens.size() - slot.getNumberOfWords(); i++) {
+                if (indexToCheck.contains(tokens.get(i).index())) {
+                    List<CoreLabel> slotTokens = tokens.subList(i, i + slot.getNumberOfWords());
+                    if (slotTokens.stream().map(CoreLabel::originalText).collect(Collectors.joining(" ")).equalsIgnoreCase(slot.getName())) {
+                        slots.add(slot);
+                        indexToCheck.removeAll(slotTokens.stream().map(CoreLabel::index).collect(Collectors.toSet()));
+                    }
+                }
+            }
+        for (List<IndexedWord> newAddress : addresses) {
+            Set<Slot> newSlots = partialMatchWithSlotAddress(newAddress);
+            for (Slot newSlot : newSlots)
+                if (!slots.contains(newSlot))
+                    slots.add(newSlot);
         }
     }
 
@@ -642,16 +1128,17 @@ public class CarPoolingInformationExtraction implements Module {
         return correctedUtterance;
     }
 
+    /*
     /**
      * Execute the geocoding for the found location via Nominatim.
      *
      * @param location the String with the location name
-     * @return the JSON Object with the location innformation
-     */
+     * @return the String of the JSONObject with the location information
+     /
     private String getNominatimJSON(String location) {
         StringBuilder a = new StringBuilder();
         try {
-            URL startAddress = new URL(NOMINATIM_SEARCH_URL + URLEncoder.encode(location, "UTF-8"));
+            URL startAddress = new URL(NOMINATIM_SEARCH_URL + URLEncoder.encode(location, StandardCharsets.UTF_8));
             log.info(startAddress.toString());
             URLConnection geoConnection = startAddress.openConnection();
             BufferedReader in = new BufferedReader(
@@ -665,5 +1152,162 @@ public class CarPoolingInformationExtraction implements Module {
             exception.printStackTrace();
         }
         return a.toString();
+    }
+    */
+
+    /**
+     * Returns the response send by the asked Google Maps service.
+     *
+     * @param service     the URL of the needed Google Maps service
+     * @param postRequest must be true if the request is a POST request (e.g. Geolocation)
+     * @param query       the JSON query for a POST request (ignore if postRequest is not true)
+     * @return the String of the JSONObject of the service response
+     */
+    private String getGoogleMapsResponseJSON(URL service, boolean postRequest, String query) {
+        StringBuilder a = new StringBuilder();
+        try {
+            log.info("Request:\t" + service.toString());
+            URLConnection geoConnection = service.openConnection();
+            geoConnection.setDoOutput(postRequest);
+            geoConnection.setRequestProperty("Content-Type", "application/json;charset=" + StandardCharsets.UTF_8);
+            if (postRequest) {
+                try (OutputStream output = geoConnection.getOutputStream()) {
+                    output.write(query.getBytes(StandardCharsets.UTF_8));
+                } catch (IOException exception) {
+                    exception.printStackTrace();
+                }
+            }
+            BufferedReader in = new BufferedReader(new InputStreamReader(geoConnection.getInputStream(), StandardCharsets.UTF_8));
+            String inputLine;
+            while ((inputLine = in.readLine()) != null) {
+                a.append(inputLine);
+            }
+            in.close();
+        } catch (IOException exception) {
+            exception.printStackTrace();
+        }
+        return a.toString();
+    }
+
+    /**
+     * Retrive the current user position's coordinates.
+     *
+     * @param parser the JsonParser for reading the response of the Google Geolocation service (just memory economy)
+     * @return the String with the coordinates in the LAT,LON format, or the emprty String in case of an error
+     */
+    private String getCurrentUserPosition(JsonParser parser) {
+        try {
+            JsonArray wifiAccessPoints = new JsonArray();
+            for (int i = 0; i < macAddresses.length; i++) {
+                JsonObject wifiAccessPoint = new JsonObject();
+                wifiAccessPoint.addProperty("macAddress", macAddresses[i]);
+                wifiAccessPoint.addProperty("channel", channels[i]);
+                wifiAccessPoints.add(wifiAccessPoint);
+            }
+            JsonObject jsonQuery = new JsonObject();
+            jsonQuery.add("wifiAccessPoints", wifiAccessPoints);
+            log.info("User Current Position Request:\t" + jsonQuery.toString());
+            JsonObject userCurrentPositionObject = parser.parse(getGoogleMapsResponseJSON(getMapsGeolocationURL(), true, jsonQuery.toString())).getAsJsonObject().get("location").getAsJsonObject();
+            if (userCurrentPositionObject.get("status").getAsString().equals("OK"))
+                return userCurrentPositionObject.get("lat") + "," + userCurrentPositionObject.get("lng");
+            else
+                return "";
+        } catch (MalformedURLException exception) {
+            exception.printStackTrace();
+        }
+        return "";
+    }
+
+    /**
+     * Construct the URL for the Google Maps Place Search API eequest.
+     *
+     * @param input the String with the location (partial) address
+     * @return the URL for the Google Maps Place Search kind of request
+     * @throws MalformedURLException if input or bias are not encodable or are malformed
+     */
+    private URL getMapsSearchURL(String input, String bias) throws MalformedURLException {
+        return new URL(MAPS_SEARCH +
+                KEY + localGoogleMapsAPIPropeties.getProperty("google.api.key") + "&" +
+                INPUT + URLEncoder.encode(input, StandardCharsets.UTF_8) + "&" +
+                INPUT_TYPE + "&" +
+                LANGUAGE + "&" +
+                FIELDS +
+                ((bias.isEmpty()) ? "" : "&" + LOCATION_BIAS + bias));
+    }
+
+
+    /**
+     * Construct the URL for the Google Maps Geolocation API request.
+     *
+     * @return the URL for the Google Maps Geolocation kind of request
+     */
+    private URL getMapsGeolocationURL() throws MalformedURLException {
+        return new URL(MAPS_GEOLOCATION +
+                KEY + localGoogleMapsAPIPropeties.getProperty("google.api.key"));
+    }
+
+    /**
+     * Construct the URL for the Google Maps Geocoding API request.
+     *
+     * @param address the String with the address whise coordinates are needed
+     * @return the URL for the Google Maps Geocoding kind of request
+     * @throws MalformedURLException if is not encodable or malformed
+     */
+    private URL getMapsGeocodingURL(String address) throws MalformedURLException {
+        return new URL(MAPS_GEOCODING +
+                KEY + localGoogleMapsAPIPropeties.getProperty("google.api.key") + "&" +
+                ADDRESS + URLEncoder.encode(address, StandardCharsets.UTF_8) + "&" +
+                AREA_BOUNDING + "&" +
+                LANGUAGE + "&" +
+                REGION);
+    }
+
+    /**
+     * Construct the URL for the Google Maps Reverse Geocoding API request.
+     *
+     * @param latLng the String of the latitude and longitued of the poinr whose address is needed, in the LAT,LON format
+     * @param types  the optional information types needed
+     * @return the URL for the Google Maps Reverse Geocoding kind of request
+     * @throws MalformedURLException if latLng or types are malformed or invalid for this type of request
+     */
+    private URL getMapsReverseGeocodingURL(String latLng, String types) throws MalformedURLException {
+        return new URL(MAPS_GEOCODING +
+                KEY + localGoogleMapsAPIPropeties.getProperty("google.api.key") + "&" +
+                LAT_LNG + latLng + "&" +
+                LANGUAGE +
+                ((types.isEmpty()) ? "" : "&" + GEOCODING_RESULT_TYPES + types));
+    }
+
+    /**
+     * Check if the time haa a temporal specification ("sera" or "mattina").
+     *
+     * @param token    the hour to check
+     * @param sentence the sentence in wich to check
+     * @param mod      the seeked modifier
+     * @return true if any temporal specification of the given type was found, false otherwise
+     */
+    private boolean hasTemporalSpecification(IndexedWord token, SemanticGraph sentence, TemporalModifier mod) {
+        boolean toReturn = false;
+        for (IndexedWord child : sentence.getChildren(token)) {
+            if (mod.texts.contains(child.originalText()))
+                toReturn = true;
+        }
+        return toReturn;
+    }
+
+    /**
+     * Round the current minutes value to the previuos hour quarter (so by floor).
+     *
+     * @param minutes the current minute value
+     * @return the int rounded minute value
+     */
+    private int roundToPreviousQuarter(int minutes) {
+        int i = 0;
+        int m = minutes;
+        while (m >= QUARTER) {
+            m -= QUARTER;
+            i++;
+        }
+        return i * QUARTER;
     }
 }

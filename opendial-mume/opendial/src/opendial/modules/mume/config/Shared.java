@@ -4,11 +4,94 @@ import java.util.*;
 import java.util.logging.Logger;
 
 public class Shared {
+    private static final String START = "start";
+    private static final String CAPITAL_START = "Start";
+    private static final String END = "end";
+    private static final String CAPITAL_END = "End";
+    private static final String TIME = "Time";
+    private static final String DATE = "Date";
+    private static final String SLOT = "Slot";
+    private static final String ADDRESS = "Address";
+    private static final String CITY = "City";
+    public static final String START_TIME = START + TIME;
+    public static final String END_TIME = END + TIME;
+    public static final String START_DATE = START + DATE;
+    public static final String END_DATE = END + DATE;
+    public static final String START_SLOT = START + SLOT;
+    public static final String END_SLOT = END + SLOT;
+    public static final String START_ADDRESS = START + ADDRESS;
+    public static final String END_ADDRESS = END + ADDRESS;
+    public static final String START_CITY = START + CITY;
+    public static final String END_CITY = END + CITY;
+    public static final String VEHICLE_TYPE = "vehicleType";
+    private static final String LAT = "Lat";
+    private static final String LON = "Lon";
+    public static final String START_LAT = START + LAT;
+    public static final String START_LON = START + LON;
+    public static final String END_LAT = END + LAT;
+    public static final String END_LON = END + LON;
+    private static final String SORTED_SLOTS = "SortedSlots";
+    public static final String START_SORTED_SLOTS = START + SORTED_SLOTS;
+    public static final String END_SORTED_SLOTS = END + SORTED_SLOTS;
+    private static final String INFERRED = "inferred";
+    public static final String INFERRED_START_CITY = INFERRED + CAPITAL_START + CITY;
+    public static final String INFERRED_END_CITY = INFERRED + CAPITAL_END + CITY;
+    private static final String UNSPECIFIED = "unspecified";
+    public static final String UNSPECIFIED_START_SLOT = UNSPECIFIED + CAPITAL_START + SLOT;
+    public static final String UNSPECIFIED_END_SLOT = UNSPECIFIED + CAPITAL_END + SLOT;
+
     public static final String NONE = "Missing";
 
+    public static final double DISTANCE_THRESHOLD = 0.075;
+
+    // Google Maps
+    public static final String KEY = "key=";
+    public static final String LANGUAGE = "language=it";
+    /**
+     * Google service URL to get the complete address from the (incomplete) information given by the user
+     */
+    public static final String MAPS_SEARCH = "https://maps.googleapis.com/maps/api/place/findplacefromtext/json?";
+    public static final String INPUT = "input=";
+    public static final String INPUT_TYPE = "inputtype=textquery";
+    public static final String FIELDS = "fields=formatted_address,geometry/location";
+    public static final String LOCATION_BIAS = "locationbias=point:";
+    public static final String LOCATION_BIAS_RECTANGLE = "locationbias=rectangle:44.50,7.25|45.50,8.00";
+
+    /**
+     * Google service URL to get the current location of the user
+     */
+    public static final String MAPS_GEOLOCATION = "https://www.googleapis.com/geolocation/v1/geolocate?";
+
+    /**
+     * Google service URL to get the address of a coordinate point
+     */
+    public static final String MAPS_GEOCODING = "https://maps.googleapis.com/maps/api/geocode/json?";
+    public static final String LAT_LNG = "latlng=";
+    public static final String GEOCODING_RESULT_TYPES = "result_type=";
+    public static final String GEOCODING_LOCALITY = "administrative_area_level_3|locality";
+
+    /**
+     * Google service URL to get the address' parts out of an address
+     */
+    public static final String GOOGLE_API_ADDRESS = "address=";
+    public static final String AREA_BOUNDING = "bounds=44.50,7.25|45.50,8.00";
+    public static final String REGION = "region=it";
+
+    /**
+     * Google service response fields
+     */
+    public static final String LATITUDE = "lat";
+    public static final String LONGITUDE = "lng";
+    public static final String COMPLETE_ADDRESS = "formatted_address";
+    public static final String COMPONENTS = "address_components";
+    public static final String LONG_ADDRESS = "long_name";
+    public static final String RESULTS = "results";
+
+    /*
     // Nominatim
     public static final String NOMINATIM_SEARCH_URL = "https://nominatim.openstreetmap.org/search.php?format=json&q=";
     public static final int NOMINATIM_TIMEOUT = 1000;
+    */
 
     public static final Set<String> STRONG_START_CITY_CASE = new HashSet<>(Arrays.asList("da"));   // "da Pinerolo"
     // DI -> "Mi serve una delle auto di Pinerolo" ==> "Voglio lasciare la macchina in via del Castello DI Nichelino"
@@ -18,10 +101,18 @@ public class Shared {
     public static final Set<String> WEAK_START_CITY_CASE = new HashSet<>(Arrays.asList("di"));  // "voglio una delle macchine di Nichelino"
     public static final Set<String> WEAK_END_CITY_CASE = new HashSet<>(Arrays.asList("a")); // "da Pinerolo a Nichelino"
 
-    public static final Set<String> STRONG_START_SLOT_CASE = new HashSet<>(Arrays.asList("da"));  // "da piazza Vittorio Veneto"
-    public static final Set<String> WEAK_START_SLOT_CASE = new HashSet<>(Arrays.asList("in"));  // "in piazza Avis"
-    public static final Set<String> STRONG_END_SLOT_CASE = new HashSet<>(Arrays.asList("a")); // "a piazza Vittorio Veneto"
-    public static final Set<String> DEPENDANT_SLOT_CASE = new HashSet<>(Arrays.asList("in"));   // "voglio partire da Pinerolo in piazza Avis", "Voglio arrivare A nichino in viale Segre"
+    public static final Set<String> STRONG_START_ADDRESS_CASE = new HashSet<>(Arrays.asList("da"));  // "da piazza Vittorio Veneto"
+    public static final Set<String> WEAK_START_ADDRESS_CASE = new HashSet<>(Arrays.asList("in"));  // "in piazza Avis"
+    public static final Set<String> STRONG_END_ADDRESS_CASE = new HashSet<>(Arrays.asList("a")); // "a piazza Vittorio Veneto"
+    public static final Set<String> DEPENDANT_ADDRESS_CASE = new HashSet<>(Arrays.asList("in"));   // "voglio partire da Pinerolo in piazza Avis", "Voglio arrivare A nichino in viale Segre"
+
+    public static final Set<String> STRONG_START_SLOT_CASE = new HashSet<>(Arrays.asList("da"));   // "da BERNINI"
+    // DI -> "Mi serve una delle auto di SANTA GIULIA" ==> "Voglio lasciare la macchina a MATTEOTTI DI Grugliasco"
+    public static final Set<String> STRONG_END_SLOT_CASE = new HashSet<>(Arrays.asList("fino"));    // "fino a OSPEDALE MARIA VITTORIA"
+    // A -> "da BERNINI a TOFANE" => "Voglio andare da MARCONI A Vinovo a Nichelino"
+    public static final Set<String> DEPENDANT_SLOT_CASE = new HashSet<>(Arrays.asList("a", "di"));  // "voglio partire da Torino a BERNINI", "voglio partire da MARCONI di VInovo"
+    public static final Set<String> WEAK_START_SLOT_CASE = new HashSet<>(Arrays.asList("di", "del"));  // "voglio una delle macchine del parcheggio BERNINI"
+    public static final Set<String> WEAK_END_SLOT_CASE = new HashSet<>(Arrays.asList("a")); // "da BERNINI a BOLOGNA"
 
     public static final Set<String> STRONG_START_DATE_CASE = new HashSet<>(Arrays.asList("da", "dal"));  // "da domani", "dal 26"
     public static final Set<String> STRONG_END_DATE_CASE = new HashSet<>(Arrays.asList("fino", "a", "al")); // "fino a dopodomani", "al 27", "a domani"
@@ -31,17 +122,22 @@ public class Shared {
     public static final Set<String> DEPENDANT_DATE_CASE = new HashSet<>(Arrays.asList("del", "di"));   // "dalle _ alle _ del 20 febbraio", "dalle _ alle _ di domani"
 
     public static final Set<String> STRONG_START_TIME_CASE = new HashSet<>(Arrays.asList("dalle"));   // "dalle 14"
-    public static final Set<String> STRONG_END_TIME_CASE = new HashSet<>(Arrays.asList("fino"));    // "fino alle 17" (17 -case-> fino -mwe-> alle)
+    public static final Set<String> STRONG_END_TIME_CASE = new HashSet<>(Arrays.asList("fino", "a"));    // "fino alle 17" (17 -case-> fino -mwe-> alle)
     // ALLE -> "dalle _ alle 18" => "Prendero' l'auto ALLE 8"
     public static final Set<String> DEPENDANT_TIME_CASE = new HashSet<>(Arrays.asList("alle", "le"));    // "fino a domani alle 17", "entro le 14 di dopodomani"
 
-    public static final Set<String> TIME_PLUS_MODIFIERS = new HashSet<>(Arrays.asList("di sera", "di pomeriggio"));  // "... fino alle sette di sera"
-    public static final Set<String> TIME_MINUS_MODIFIERS = new HashSet<>(Arrays.asList("del mattino"));  // "... fino alle due del mattino"
+    public static final Set<String> ADDRESS_CLUE = new HashSet<>(Arrays.asList("corso", "piazza", "strada", "via", "viale", "vicolo"));
 
-    public static final Set<String> START_VERBS = new HashSet<>(Arrays.asList("iniziare", "partire", "prendere", "prenotare", "usare"));
-    public static final Set<String> END_VERBS = new HashSet<>(Arrays.asList("arrivare", "lasciare", "posare", "raggiungere", "giungere", "andare"));
+    // TODO check
+    public static final Set<String> START_VERBS = new HashSet<>(Arrays.asList("iniziare", "partire", "prendere", "prenotare", "usare", "serve", "volere",
+            // FIXME
+            "prendare", "essere"));
+    public static final Set<String> END_VERBS = new HashSet<>(Arrays.asList("arrivare", "lasciare", "posare", "raggiungere", "giungere", "andare", "essere"));
 
-    /* Sample citis */
+    public static final LinkedList<String> PUNCT = new LinkedList<>(Arrays.asList("", ".", " ", ",", ":", ";", "?", "!"));
+
+    /*
+    /* Sample citis /
     public static final Set<String> CITIES = new HashSet<>(Arrays.asList("Pinerolo", "Nichelino"));
     public static final Map<String, List<String>> CITIES_ADDRESSES = new HashMap<>();
 
@@ -50,11 +146,43 @@ public class Shared {
      *  - the first is the close economy slot
      *  - the second is the close Transport slot
      *  - the third is the open (economy) slot
-     */
+     /
     static {
         CITIES_ADDRESSES.put("Pinerolo", new ArrayList<>(Arrays.asList("piazza Vittorio Veneto", "piazza Avis", "Pinerolo Olimpica")));
         CITIES_ADDRESSES.put("Nichelino", new ArrayList<>(Arrays.asList("via del Castello", "via Elsa Morante", "viale Segre")));
     }
+    */
+
+    public static final Set<String> NOW_WORDS = new HashSet<>(Arrays.asList("adesso", "ora", "subito"));
+
+    public static final Set<String> HERE_WORDS = new HashSet<>(Arrays.asList("qui", "qua"));
+
+    static {
+        HERE_WORDS.addAll(NOW_WORDS);
+    }
+
+    /*
+    public static Set<String> hereAnswers = new HashSet<>();
+
+    static {
+        for (String w : HERE_WORDS)
+            for (int c : Arrays.asList(0, 1, 2)) {
+                String word;
+                switch (c) {
+                    case 0:
+                        word = w;
+                        break;
+                    case 1:
+                        word = w.substring(0, 1).toUpperCase() + w.substring(1);
+                        break;
+                    default:
+                        word = w.toUpperCase();
+                }
+                for (String p : PUNCT)
+                    hereAnswers.add(word + p);
+            }
+    }
+    */
 
     /* Sample vehicle type */
     public static final Map<String, List<String>> VEHICLE_TYPES = new HashMap<>();
@@ -66,9 +194,9 @@ public class Shared {
      *  - transport (da trasporto)
      */
     static {
-        // VEHICLE_TYPES.put("economy", new ArrayList<>(Arrays.asList("economy", "economica")));
+        VEHICLE_TYPES.put("economy", new ArrayList<>(Arrays.asList("economy", "economica", "economico")));
         VEHICLE_TYPES.put("luxury", new ArrayList<>(Arrays.asList("luxury", "di lusso")));
-        VEHICLE_TYPES.put("transport", new ArrayList<>(Arrays.asList("transport", "da trasporto", "il trasporto")));
+        VEHICLE_TYPES.put("transport", new ArrayList<>(Arrays.asList("transport", "da trasporto", "il trasporto", "van")));
     }
 
     // logger

@@ -12,15 +12,12 @@ import opendial.DialogueState;
 import opendial.DialogueSystem;
 import opendial.modules.Module;
 
-import java.io.File;
-import java.io.IOException;
+import java.io.*;
 import java.time.ZonedDateTime;
 import java.util.*;
 
-import static opendial.modules.mume.config.Config.LOG4J_CONFIG;
-import static opendial.modules.mume.config.Config.TINT_CONFIG;
-import static opendial.modules.mume.config.Shared.NONE;
-import static opendial.modules.mume.config.Shared.log;
+import static opendial.modules.mume.config.Config.*;
+import static opendial.modules.mume.config.Shared.*;
 
 /**
  * Extract journey information from the user utterances.
@@ -44,13 +41,15 @@ public class CarPoolingInformationExtraction implements Module {
     /*
     // HeidelTime
     HeidelTimeStandalone haidelTime;
-
-    // Google Goecoding
-    GeoApiContext geoContext;
     */
 
     // Tint
     TintPipeline pipeline;
+
+    // Google Goecoding
+    static Properties localGoogleMapsAPIPropeties;
+    static String[] macAddresses;
+    static String[] channels;
 
     /**
      * Creates a new instance of the flight-booking module
@@ -66,6 +65,8 @@ public class CarPoolingInformationExtraction implements Module {
      */
     @Override
     public void start() {
+        // The charset encoding has to be settet at starttime
+        // System.setProperty("file.encoding", "UTF-8");
         pipeline = new TintPipeline();
         try {
             File configFile = new File(TINT_CONFIG);
@@ -84,13 +85,31 @@ public class CarPoolingInformationExtraction implements Module {
                 POSTagger.TREETAGGER
                 //true
         );
-
-        geoContext = new GeoApiContext.Builder()
-                .apiKey("xxx")
-                .maxRetries(3)
-                .retryTimeout(3, TimeUnit.SECONDS)
-                .build();
         */
+
+        /*===== CAUTION =====*/
+        localGoogleMapsAPIPropeties = new Properties();
+        try (BufferedReader googlePropertiesReader = new BufferedReader(new InputStreamReader(new FileInputStream(GOOGLE_MAPS_API_CONFIG)))) {
+            localGoogleMapsAPIPropeties.load(googlePropertiesReader);
+        } catch (FileNotFoundException fNFE) {
+            log.severe("The attemp to use non-local Google API properties has failed.");
+            fNFE.printStackTrace();
+        } catch (IOException ex) {
+            ex.printStackTrace();
+        }
+
+        String[] macPortsPairs = localGoogleMapsAPIPropeties.getProperty("mac.address").split(";");
+        if (macPortsPairs.length > 0) {
+            macAddresses = new String[macPortsPairs.length];
+            channels = new String[macPortsPairs.length];
+            for (int i = 0; i < macPortsPairs.length; i++) {
+                String[] temp = macPortsPairs[i].split(",");
+                macAddresses[i] = temp[0];
+                channels[i] = temp[1];
+            }
+        } else
+            log.severe("Failed to load 'mac.address' property.");
+        /*===================*/
 
         paused = false;
     }
@@ -111,6 +130,7 @@ public class CarPoolingInformationExtraction implements Module {
                 state.queryProb("a_m").getBest().toString().equals("RETRIEVE_INFORMATION")) {
 
             String userUtterance = state.queryProb("u_u").getBest().toString();
+            // String userUtterance = new String(userUtteranceBytes, StandardCharsets.UTF_16);
 
             // Informations
             Map<String, String> information = new HashMap<>();
@@ -198,7 +218,7 @@ public class CarPoolingInformationExtraction implements Module {
              * https://web.archive.org/web/20130527080241/http://www.java2s.com/Open-Source/Java/Testing/jacareto/jacareto/toolkit/log4j/LogOutputStream.java.htm
              */
 
-            // TESTS
+            /* TESTS
             // log.info(json.toString());
             // ((ArrayList) json.get("timexes")).forEach(t -> log.info(((LinkedTreeMap) t).get("timexType").toString()));
             log.info("Results:");
@@ -206,6 +226,7 @@ public class CarPoolingInformationExtraction implements Module {
             log.info("Token's POS-tags:");
             List<CoreLabel> tokens = annotation.get(CoreAnnotations.TokensAnnotation.class);
             tokens.forEach(token -> log.info(token.get(CoreAnnotations.PartOfSpeechAnnotation.class)));
+            tokens.forEach(token -> log.info(token.get(CoreAnnotations.LemmaAnnotation.class)));
             log.info("Sentences:");
             List<CoreMap> sentences = annotation.get(CoreAnnotations.SentencesAnnotation.class);
             sentences.forEach(sentence -> log.info(sentence.toShorterString()));
@@ -250,6 +271,7 @@ public class CarPoolingInformationExtraction implements Module {
             durTokens.forEach(t -> log.info(t.get(CoreAnnotations.NormalizedNamedEntityTagAnnotation.class)));
             log.info("Locations:");
             locTokens.forEach(t -> log.info(t.get(CoreAnnotations.TextAnnotation.class)));
+            */
 
             /* OLD
             List<CoreLabel> tokens = annotation.get(CoreAnnotations.TokensAnnotation.class);
@@ -351,9 +373,10 @@ public class CarPoolingInformationExtraction implements Module {
             */
 
             // NO TEST
-            //List<CoreLabel> tokens = annotation.get(CoreAnnotations.TokensAnnotation.class);
-            //List<CoreMap> sentences = annotation.get(CoreAnnotations.SentencesAnnotation.class);
-            //SemanticGraph dependencies = sentences.get(0).get(SemanticGraphCoreAnnotations.EnhancedPlusPlusDependenciesAnnotation.class);
+            List<CoreLabel> tokens = annotation.get(CoreAnnotations.TokensAnnotation.class);
+            List<CoreMap> sentences = annotation.get(CoreAnnotations.SentencesAnnotation.class);
+            // There is only one sentence: property 'ita_toksent.ssplitOnlyOnNewLine=true' in Tint's default-config.properties
+            SemanticGraph dependencies = sentences.get(0).get(SemanticGraphCoreAnnotations.EnhancedPlusPlusDependenciesAnnotation.class);
 
             List<List<IndexedWord>> locationAnnotations = new ArrayList<>();
             List<List<IndexedWord>> dateAnnotations = new ArrayList<>();
@@ -402,11 +425,15 @@ public class CarPoolingInformationExtraction implements Module {
                     currentNERIndexedWords.add(dependencies.getNodeByIndex(token.index()));
             }
 
+
             LocationsExtractor.getInstance().extractLocations(annotation, locationAnnotations, information, previousInformation, machinePrevState);
 
-            DatesTimesExtractor.getInstance().extractTimeAndDate(annotation, dateAnnotations, timeAnnotations, durationAnnotations, information, machinePrevState);
+            DatesTimesExtractor.getInstance().extractTimeAndDate(annotation, dateAnnotations, timeAnnotations, durationAnnotations, information, previousInformation, machinePrevState);
 
             VehicleTypeExtractor.getInstance().extractVehicleType(userUtterance, information, previousInformation);
+
+            // TODO check errors
+            List<String> errors = new LinkedList<>();
 
             boolean hasBeenUpdated = false;
             for (Map.Entry<String, String> info : information.entrySet())
@@ -417,7 +444,13 @@ public class CarPoolingInformationExtraction implements Module {
                 log.info(s + " = " + v);
                 system.addContent(s, v);
             });
-            system.addContent("update", String.valueOf(hasBeenUpdated));
+            if (hasBeenUpdated)
+                if (errors.isEmpty())
+                    system.addContent("update", String.valueOf(true));
+                else {
+                    system.addContent("update", String.valueOf(false));
+                    system.addContent("errors", String.join(",", errors));
+                }
         }
     }
 
@@ -573,12 +606,19 @@ public class CarPoolingInformationExtraction implements Module {
         }
         */
 
+        String subCorrectedUtterance = correctedUtterance.substring(0, correctedUtterance.length() - 1);
+        correctedUtterance = subCorrectedUtterance.replace(".", " e ").replace(";", " e ") + correctedUtterance.charAt(correctedUtterance.length() - 1);
+
         /*
          * IMPORTANT: if the user utterance ends with a named entity (for example 'Voglio partire da piazza Castello')
          * the extraction process won't get this last one; a full stop (NER type "O", null) is therefore required and
          * has to be added if missing.
          */
-        if (!originalUtterance.endsWith("."))
+        boolean endWithPunct = false;
+        for (int i = 0; i < PUNCT.size() && !endWithPunct; i++)
+            if (!originalUtterance.endsWith(PUNCT.get(i)))
+                endWithPunct = true;
+        if (!endWithPunct)
             correctedUtterance = correctedUtterance + ".";
         return correctedUtterance;
     }
