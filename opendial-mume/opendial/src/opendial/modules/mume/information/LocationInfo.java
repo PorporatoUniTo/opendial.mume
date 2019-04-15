@@ -85,6 +85,10 @@ public class LocationInfo {
         isEnd = false;
     }
 
+    public List<IndexedWord> getWordList() {
+        return wordList;
+    }
+
     private List<IndexedWord> getGovernors() {
         return governors;
     }

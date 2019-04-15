@@ -11,16 +11,14 @@ import opendial.modules.mume.information.DurationInfo;
 import opendial.modules.mume.information.TimeInfo;
 
 import java.time.ZonedDateTime;
-import java.time.format.DateTimeFormatter;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
 import static opendial.modules.mume.config.Shared.*;
-import static opendial.modules.mume.information.DateInfo.WEEK_DAY_NUMBER;
-import static opendial.modules.mume.information.DateInfo.YEAR_MONTH_NUMBER;
-import static opendial.modules.mumeuserdriven.Shared.log;
+import static opendial.modules.mume.information.DurationInfo.DURATIONS_SEPARATOR;
+import static opendial.modules.mume.information.TimeInfo.QUARTER;
 
 class DatesTimesExtractor {
     private static DatesTimesExtractor extractor = null;
@@ -53,17 +51,22 @@ class DatesTimesExtractor {
                             Map<String, String> oldInformation,
                             String machinePrevState) {
         try {
+            log.info("Dates:\t" + dateAnnotations);
+            log.info("Times:\t" + timeAnnotations);
+            log.info("Durations:\t" + durationAnnotations);
+
+
             DateInfo newStartDate = null;
             DateInfo newEndDate = null;
             TimeInfo newStartTime = null;
             TimeInfo newEndTime = null;
+            DurationInfo newDuration = null;
 
             List<CoreLabel> tokens = annotatedUserUtterance.get(CoreAnnotations.TokensAnnotation.class);
             SemanticGraph dependencies = annotatedUserUtterance.get(CoreAnnotations.SentencesAnnotation.class).get(0).get(SemanticGraphCoreAnnotations.EnhancedPlusPlusDependenciesAnnotation.class);
 
             List<DateInfo> dates = dateAnnotations.stream().map(a -> new DateInfo(a, tokens, dependencies)).collect(Collectors.toList());
             List<TimeInfo> times = timeAnnotations.stream().map(a -> new TimeInfo(a, tokens, dependencies)).collect(Collectors.toList());
-            // TODO
             List<DurationInfo> durs = durationAnnotations.stream().map(a -> new DurationInfo(a, tokens, dependencies)).collect(Collectors.toList());
             boolean nowClue = false;
 
@@ -210,9 +213,10 @@ class DatesTimesExtractor {
                         date.isEnd = true;
                     }
                 }
+
                 /* TIMES */
                 for (TimeInfo time : times) {
-//                    log.info(time.getFirstVerbGovernorLemma());
+                    // log.info(time.getFirstVerbGovernorLemma());
                     if (newStartTime == null && !time.isEnd &&
                             START_VERBS.contains(time.getFirstVerbGovernorLemma())) {
                         newStartTime = time;
@@ -259,42 +263,48 @@ class DatesTimesExtractor {
                 }
             }
 
-            for (CoreLabel token : tokens)
-                if (NOW_WORDS.contains(token.originalText().toLowerCase()))
-                    nowClue = true;
+
+            if (!machinePrevState.endsWith("SLOT"))
+                for (CoreLabel token : tokens)
+                    if (NOW_WORDS.contains(token.originalText().toLowerCase()))
+                        nowClue = true;
 
 
-            /* TODO implement
-            if (newEndTime == null && !durs.isEmpty() && newStartTime != null) {
-                newEndTime = TimeInfo.generateFromDuration(newStartTime, durs.get(0));
-                newEndTime.isEnd = true;
+            if (newEndTime == null && !durs.isEmpty()) {
+                newDuration = durs.get(0);
             }
-            */
 
-            /*
-            // Finally
-            // TODO check
-            // If the only temporal information communicated is a date,
-            //  then it's the start date and the end date
-            if (newStartDate == null &&
-                    newEndDate == null &&
-                    dates.size() == 1) {
-                newStartDate = dates.get(0);
-                newStartDate.isStart = true;
-                // newEndDate = dates.get(0);
-                // newEndDate.isEnd = true;
-            }
-            */
 
-            /* Check if the user is answering to targetted questions */
-            /* Not updating indexes, but it doesn't matter */
-            if (times.size() == 1 && newStartTime == null && machinePrevState.endsWith("START_TIME")) {
+            if (newEndTime == null && newStartTime == null && newDuration == null &&
+                    times.size() == 1 && DEPENDANT_TIME_CASE.contains(times.get(0).getCaseType())) {
                 newStartTime = times.get(0);
                 times.get(0).isStart = true;
-            } else if (dates.size() == 1 && newStartDate == null && machinePrevState.endsWith("START_TIME")) {
+            }
+
+
+            /* Check if the user is answering to targetted questions */
+            if (times.size() == 1 && !times.get(0).isEnd && newStartTime == null && (machinePrevState.endsWith("START_TIME") || machinePrevState.endsWith("START_DATE"))) {
+                newStartTime = times.get(0);
+                times.get(0).isStart = true;
+            } else if (dates.size() == 1 && !dates.get(0).isEnd && newStartDate == null && machinePrevState.endsWith("START_DATE")) {
                 newStartDate = dates.get(0);
                 dates.get(0).isStart = true;
             }
+
+
+            log.info("Extracted Start Time: " + newStartTime);
+            log.info("Extracted End Time: " + newEndTime);
+            log.info("Extracted Start Date: " + newStartDate);
+            log.info("Extracted End Date: " + newEndDate);
+            log.info("Extracted Duration: " + newDuration);
+            log.info("Extracted 'now': " + nowClue);
+
+
+            /* information has not been updated yet: propagate old information */
+            information.put(START_TIME, oldInformation.getOrDefault(START_TIME, NONE));
+            information.put(END_TIME, oldInformation.getOrDefault(END_TIME, NONE));
+            information.put(START_DATE, oldInformation.getOrDefault(START_DATE, NONE));
+            information.put(END_DATE, oldInformation.getOrDefault(END_DATE, NONE));
 
 
             /*--------------*/
@@ -302,12 +312,12 @@ class DatesTimesExtractor {
             /*--------------*/
             ZonedDateTime now = ZonedDateTime.now();
             // Check day/year Haideltime confusion
-            if (newStartDate != null && newStartDate.getDate().split("-").length < 3)
+            if (newStartDate != null && newStartDate.getDate().split("-").length == 1)
                 // The day of the month has been mistaken as an year by HidelTime:
                 //  the user is (likely) telling that s/he wants to start the trip
                 //  this year and this month on the day of the given date
                 newStartDate.correctDayYearConfusion(now);
-            if (newEndDate != null && newEndDate.getDate().split("-").length < 3)
+            if (newEndDate != null && newEndDate.getDate().split("-").length == 1)
                 // The day of the month has been mistaken as an year by HidelTime:
                 //  the user is (likely) telling that s/he wants to start the trip
                 //  this year and this month on the day of the given date
@@ -325,82 +335,70 @@ class DatesTimesExtractor {
             log.info("Final End Time: " + newEndTime);
 
             /* ADJUST TIMES */
-            // TODO check the methodology: minutes in letters are a problem?
             if (newStartDate != null) {
                 String date = newStartDate.getDate();
                 // "tutto il giorno"
-                boolean startIsAlsoEnd = false;
                 if (date.contains("X")) {
                     if (information.get(START_DATE).equals(NONE))
                         date = String.format("%04d-%02d-%02d", now.getYear(), now.getMonthValue(), now.getDayOfMonth());
-                    if (newEndDate == null && information.get(END_DATE).equals(NONE))
-                        startIsAlsoEnd = true;
-                    // information.put(END_DATE, date);
                 }
                 /* Correct HeidelTime error on weekday:
-                    if today is monday, "fino a lunedì" is not 'til today
-                 /
+                    if today is monday, "da lunedì" is not from today or the past monday (?)
+                 */
                 if (!newStartDate.getWeekDay().isEmpty()) {
                     String[] newStartDateFields = date.split("-");
                     int newYear = Integer.parseInt(newStartDateFields[0]);
                     int newMonth = Integer.parseInt(newStartDateFields[1]);
                     int newDayOfMonth = Integer.parseInt(newStartDateFields[2]);
-                    if (newYear == now.getYear() &&
-                            newMonth == now.getMonthValue() &&
-                            newDayOfMonth == now.getDayOfMonth()) {
-                        newDayOfMonth += WEEK_DAY_NUMBER;
-                        int dayNumber = DateInfo.getMonthDaysNumber(newMonth);
-                        if (newDayOfMonth > dayNumber) {
-                            newDayOfMonth = newDayOfMonth % dayNumber;
-                            newMonth++;
-                            if (newMonth > YEAR_MONTH_NUMBER) {
-                                newMonth = newMonth % YEAR_MONTH_NUMBER;
-                                newYear++;
-                            }
-                        }
+                    if (newYear <= now.getYear() &&
+                            newMonth <= now.getMonthValue() &&
+                            newDayOfMonth <= now.getDayOfMonth()) {
+                        newStartDate.addOneWeek();
+                        newStartDateFields = newStartDate.getDate().split("-");
+                        newYear = Integer.parseInt(newStartDateFields[0]);
+                        newMonth = Integer.parseInt(newStartDateFields[1]);
+                        newDayOfMonth = Integer.parseInt(newStartDateFields[2]);
                     }
                     date = String.format("%04d-%02d-%02d", newYear, newMonth, newDayOfMonth);
                 }
-                */
                 information.put(START_DATE, date);
-                if (startIsAlsoEnd)
-                    information.put(START_DATE, date);
-            } else if (nowClue && information.get(START_DATE).equals(NONE))
-                information.put(START_DATE, now.format(DateTimeFormatter.ISO_LOCAL_DATE));
+            }
+            // Otherwise, the user may beeing answering a direct question
+            else if (nowClue && (machinePrevState.endsWith("TIME") || machinePrevState.endsWith("DATE")) && information.get(START_DATE).equals(NONE))
+                information.put(START_DATE, String.format("%04d-%02d-%02d", now.getYear(), now.getMonthValue(), now.getDayOfMonth()));
 
             if (newEndDate != null) {
                 String date = newEndDate.getDate();
-                if (date.split("-").length < 2) {
+                String[] startDateFields = information.get(START_DATE).split("-");
+                ;
+                if (date.split("-").length < 3) {
                     // The start date or the current date if endDate == Missing
-                    String[] startDateFields = information.get(START_DATE).split("-");
+                    //  this happens when the user give only the month OR
+                    //  the system mistook a street name for a date (e.g. piazza XVIII Dicembre)
                     if (startDateFields.length >= 3)
-                        date = String.format("%s-%s-%s", startDateFields[0], startDateFields[1], startDateFields[2]);
-                    else
+                        date = String.format("%04d-%02d-%02d", Integer.parseInt(startDateFields[0]), Integer.parseInt(startDateFields[1]), Integer.parseInt(startDateFields[2]));
+                    else {
                         // startDate == Missing
-                        date = String.format("%04d-%02d-%02d", now.getYear(), now.getMonthValue(), now.getDayOfMonth());
+                        startDateFields = new String[]{String.format("%04d", now.getYear()), String.format("%02d", now.getMonthValue()), String.format("%04d", now.getDayOfMonth())};
+                        date = String.format("%s-%s-%s", startDateFields[0], startDateFields[1], startDateFields[2]);
+                    }
                 }
                 /* Correct HeidelTime error on weekday:
-                    if today is monday, "fino a lunedì" is not 'til today
-                    TODO check if "lunedì" is recognized as "il prossimo lunedì"
+                    if today is monday, "fino a lunedì" is not until today
                  */
                 if (!newEndDate.getWeekDay().isEmpty()) {
                     String[] newEndDateFields = date.split("-");
                     int newYear = Integer.parseInt(newEndDateFields[0]);
                     int newMonth = Integer.parseInt(newEndDateFields[1]);
                     int newDayOfMonth = Integer.parseInt(newEndDateFields[2]);
-                    if (newYear == now.getYear() &&
-                            newMonth == now.getMonthValue() &&
-                            newDayOfMonth == now.getDayOfMonth()) {
-                        newDayOfMonth += WEEK_DAY_NUMBER;
-                        int dayNumber = DateInfo.getMonthDaysNumber(newMonth);
-                        if (newDayOfMonth > dayNumber) {
-                            newDayOfMonth = newDayOfMonth % dayNumber;
-                            newMonth++;
-                            if (newMonth > YEAR_MONTH_NUMBER) {
-                                newMonth = newMonth % YEAR_MONTH_NUMBER;
-                                newYear++;
-                            }
-                        }
+                    if (newYear <= Integer.parseInt(startDateFields[0]) &&
+                            newMonth <= Integer.parseInt(startDateFields[0]) &&
+                            newDayOfMonth <= Integer.parseInt(startDateFields[0])) {
+                        newEndDate.addOneWeek();
+                        newEndDateFields = newEndDate.getDate().split("-");
+                        newYear = Integer.parseInt(newEndDateFields[0]);
+                        newMonth = Integer.parseInt(newEndDateFields[1]);
+                        newDayOfMonth = Integer.parseInt(newEndDateFields[2]);
                     }
                     date = String.format("%04d-%02d-%02d", newYear, newMonth, newDayOfMonth);
                 }
@@ -409,80 +407,104 @@ class DatesTimesExtractor {
             // If the user cummunicated only the end hour, probably the end date is the same as the start date
             //  (or today if startDate == Missing)
             else if (newEndTime != null && information.get(END_DATE).equals(NONE)) {
-                String[] startDate = information.get(START_DATE).split("-");
-                if (startDate.length == 3)
-                    information.put(END_DATE, String.format("%s-%s-%s", startDate[0], startDate[1], startDate[2]));
-                else
-                    information.put(END_DATE, String.format("%04d-%02d-%02d", now.getYear(), now.getMonthValue(), now.getDayOfMonth()));
+                String[] startDateFields = information.get(START_DATE).split("-");
+                if (startDateFields.length == 3)
+                    information.put(END_DATE, String.format("%s-%s-%s", startDateFields[0], startDateFields[1], startDateFields[2]));
+                else {
+                    String newDate = String.format("%04d-%02d-%02d", now.getYear(), now.getMonthValue(), now.getDayOfMonth());
+                    information.put(START_DATE, newDate);
+                    information.put(END_DATE, newDate);
+                }
             }
+            // If the user didn't day anything about the endDate or the endTime,
+            //  The system assums that the endDate is the same as the startDate
+            else if (information.get(END_DATE).equals(NONE) && !information.get(START_DATE).equals(NONE))
+                information.put(END_DATE, information.getOrDefault(START_DATE, NONE));
+
 
             if (newStartTime != null) {
                 String[] newTimeFields = newStartTime.getTime().split(":");
                 String[] startDateFields = information.get(START_DATE).split("-");
                 if (startDateFields.length < 3) {
                     // startDate == Missing: update
-                    startDateFields = new String[]{String.valueOf(now.getYear()), String.valueOf(now.getMonthValue()), String.valueOf(now.getDayOfMonth())};
+                    startDateFields = new String[]{String.format("%04d", now.getYear()), String.format("%02d", now.getMonthValue()), String.format("%02d", now.getDayOfMonth())};
                     information.put(START_DATE, String.format("%s-%s-%s", startDateFields[0], startDateFields[1], startDateFields[2]));
                 }
 
-//                log.info(newStartTime.getWords());
-//                log.info(String.valueOf(newStartTime.isInLetters()));
-//                log.info(String.valueOf(Integer.parseInt(startDateFields[2]) == now.getDayOfMonth()));
-//                log.info(String.valueOf(Integer.parseInt(newTimeFields[0]) < now.getHour()));
-//                log.info(String.valueOf(Integer.parseInt(newTimeFields[0]) < 12));
-
-                // If the user communicated an ambiguus time ("le sei": 6:00 or 16:00?)
+                // If the user communicated an ambiguus time ("le sei": 6:00 or 18:00?)
                 //  the system tries to infer the real start time
-                String time = (Integer.parseInt(newTimeFields[0]) +
+                // TODO check the methodology: minutes in letters are a problem?
+                newTimeFields[0] = String.format("%02d", Integer.parseInt(newTimeFields[0]) +
                         (// If the user has communicated an ambiguus hour, and...
-                                (newStartTime.hasEveningSpecification() ||
-                                        (newStartTime.isInLetters() &&
-                                                // the start day is today, and...
-                                                Integer.parseInt(startDateFields[2]) == now.getDayOfMonth() &&
-                                                // the inferred hour is past, and...
-                                                Integer.parseInt(newTimeFields[0]) < now.getHour() &&
-                                                // there is actually some ambguity
-                                                Integer.parseInt(newTimeFields[0]) < 12)) ?
-                                        12 : 0)
-                ) + ":" + newTimeFields[1];
+                                (Integer.parseInt(newTimeFields[0]) < 12 &&
+                                        (newStartTime.hasEveningSpecification() ||
+                                                (newStartTime.isInLetters() &&
+                                                        // the start day is today, and...
+                                                        Integer.parseInt(startDateFields[0]) == now.getYear() &&
+                                                        Integer.parseInt(startDateFields[1]) == now.getMonthValue() &&
+                                                        Integer.parseInt(startDateFields[2]) == now.getDayOfMonth() &&
+                                                        // the inferred hour (with corrected minutes) is past, and...
+                                                        (Integer.parseInt(newTimeFields[0]) < now.getHour() ||
+                                                                Integer.parseInt(newTimeFields[0]) == now.getHour() &&
+                                                                        Integer.parseInt(newTimeFields[1]) < (now.getMinute() / QUARTER) * QUARTER)))) ?
+                                        12 : 0));
                 // OpenDial has some problem with ':', so replace it with '-' in time information
-                information.put(START_TIME, time.replace(":", "-"));
-            } else if ((newStartDate != null && newStartDate.isNow || nowClue) && information.get(START_TIME).equals(NONE)) {
-                String[] nowTimeFields = now.format(DateTimeFormatter.ISO_LOCAL_TIME).split(":");
-                information.put(START_TIME, String.format("%s:%s", nowTimeFields[0], nowTimeFields[1]).replace(":", "-"));
+                information.put(START_TIME, String.format("%s:%s", newTimeFields[0], newTimeFields[1]).replace(":", "-"));
             }
+            // Otherwise, the user may beeing answering a direct question
+            else if ((newStartDate != null && newStartDate.isNow || nowClue && (machinePrevState.endsWith("TIME") || machinePrevState.endsWith("DATE"))) && information.get(START_TIME).equals(NONE))
+                information.put(START_TIME, TimeInfo.roundToPreviousQuarter(String.format("%02d:%02d", now.getHour(), now.getMinute())).replace(":", "-"));
+                // The user is giving the strat date as a time laps: "voglio partire tra due ore"
+            else if (newDuration != null && (machinePrevState.endsWith("TIME") || machinePrevState.endsWith("DATE")) &&
+                    // The duration is valid, and not e.g. "sera"
+                    (newDuration.getYears() != 0 ||
+                            newDuration.getMonths() != 0 ||
+                            newDuration.getDays() != 0 ||
+                            newDuration.getHours() != 0 ||
+                            newDuration.getMinutes() != 0)) {
+                String startTime = TimeInfo.roundToPreviousQuarter(String.format("%02d:%02d", now.getHour(), now.getMinute()));
+                String startDate = information.getOrDefault(START_DATE, String.format("%04d-%02d-%02d", now.getYear(), now.getMonthValue(), now.getDayOfMonth()));
+                if (startDate.equals(NONE))
+                    startDate = String.format("%04d-%02d-%02d", now.getYear(), now.getMonthValue(), now.getDayOfMonth());
+                String[] dur = TimeInfo.roundToNextQuarter(newDuration.toEnd(startTime, startDate)).split(DURATIONS_SEPARATOR);
+
+                log.info("Final Duration:\t" + dur[0] + " | " + dur[1]);
+
+                if (information.get(START_TIME).equals(NONE))
+                    information.put(START_TIME, dur[0].replace(":", "-"));
+                if (information.get(START_DATE).equals(NONE))
+                    information.put(START_DATE, dur[1]);
+                if (information.get(END_DATE).equals(NONE))
+                    information.put(END_DATE, dur[1]);
+            }
+            /* If the user gave just the startTime, likely the startDate is 'today' */
+            if (!information.getOrDefault(START_TIME, NONE).equals(NONE) &&
+                    information.getOrDefault(START_DATE, NONE).equals(NONE))
+                information.put(START_DATE, String.format("%04d-%02d-%02d", now.getYear(), now.getMonthValue(), now.getDayOfMonth()));
 
             if (newEndTime != null) {
                 String[] newTimeFields = newEndTime.getTime().split(":");
 
                 String[] startDateFields = information.get(START_DATE).split("-");
                 if (startDateFields.length < 3) {
-                    // startDate == Missing
-                    startDateFields = new String[]{String.valueOf(now.getYear()), String.valueOf(now.getMonthValue()), String.valueOf(now.getDayOfMonth())};
+                    // startDate == Missing: update
+                    startDateFields = new String[]{String.format("%04d", now.getYear()), String.format("%02d", now.getMonthValue()), String.format("%02d", now.getDayOfMonth())};
                     information.put(START_DATE, String.format("%s-%s-%s", startDateFields[0], startDateFields[1], startDateFields[2]));
                 }
                 String[] endDateFields = information.get(END_DATE).split("-");
-                if (endDateFields.length < 3) {
+                if (endDateFields.length < 3)
                     // endDate == Missing
-                    endDateFields = startDateFields;
-                    information.put(END_DATE, String.format("%s-%s-%s", endDateFields[0], endDateFields[1], endDateFields[2]));
-                }
+                    information.put(END_DATE, String.format("%s-%s-%s", startDateFields[0], startDateFields[1], startDateFields[2]));
 
                 int startHour;
                 String[] startTimeFields = information.get(START_TIME).split("-");
                 if (startTimeFields.length < 2)
-                    // stratTime == Missing
+                    // startTime == Missing
                     startHour = now.getHour();
                 else
                     startHour = Integer.parseInt(startTimeFields[0]);
 
-//                log.info(newEndTime.getWords());
-//                log.info(String.valueOf(newEndTime.isInLetters()));
-//                log.info(String.valueOf(Integer.parseInt(endDateFields[2]) == now.getDayOfMonth()));
-//                log.info(String.valueOf(Integer.parseInt(newTimeFields[0]) < now.getHour()));
-//                log.info(String.valueOf(Integer.parseInt(newTimeFields[0]) < 12));
-
-                String time = (Integer.parseInt(newTimeFields[0]) +
+                newTimeFields[0] = String.format("%02d", Integer.parseInt(newTimeFields[0]) +
                         (// If the user has communicated an ambiguus hour, and...
                                 (newEndTime.hasEveningSpecification() ||
                                         (newEndTime.isInLetters() &&
@@ -492,16 +514,36 @@ class DatesTimesExtractor {
                                                 Integer.parseInt(newTimeFields[0]) <= startHour &&
                                                 // there is actually some ambguity
                                                 Integer.parseInt(newTimeFields[0]) < 12)) ?
-                                        12 : 0)
-                ) + ":" + newTimeFields[1];
+                                        12 : 0));
                 // OpenDial has some problem with ':', so replace it with '-' in time information
-                information.put(END_TIME, time.replace(":", "-"));
+                information.put(END_TIME, String.format("%s:%s", newTimeFields[0], newTimeFields[1]).replace(":", "-"));
+            } else if (newDuration != null && !(machinePrevState.endsWith("TIME") || machinePrevState.endsWith("DATE")) &&
+                    (newDuration.getYears() != 0 ||
+                            newDuration.getMonths() != 0 ||
+                            newDuration.getDays() != 0 ||
+                            newDuration.getHours() != 0 ||
+                            newDuration.getMinutes() != 0) &&
+                    !information.get(START_TIME).equals(NONE)) {
+                // Can not check newStartTime due to the correcttion e.g. for temporal specification ("di sera")
+                String startTime = information.get(START_TIME).replace("-", ":");
+                String startDate = information.get(START_DATE);
+                String[] dur = TimeInfo.roundToNextQuarter(newDuration.toEnd(startTime, startDate)).split(DURATIONS_SEPARATOR);
+                if (information.get(END_TIME).equals(NONE))
+                    information.put(END_TIME, dur[0].replace(":", "-"));
+                if (information.get(END_DATE).equals(NONE))
+                    information.put(END_DATE, dur[1]);
             }
+            /* If the user gave just the endTime, likely the endDate is the startDate */
+            if (!information.getOrDefault(END_TIME, NONE).equals(NONE) &&
+                    information.getOrDefault(END_DATE, NONE).equals(NONE) &&
+                    information.getOrDefault(START_DATE, NONE).equals(NONE))
+                information.put(END_DATE, information.getOrDefault(START_DATE, NONE));
         } catch (NullPointerException exception) {
             exception.printStackTrace();
             log.severe("USER UTTERANCE:\t" + annotatedUserUtterance.toString());
             log.severe("DATES FOUND:\t" + dateAnnotations.toString());
             log.severe("TIMES FOUND:\t" + timeAnnotations.toString());
+            log.severe("DURATIONS FOUND:\t" + durationAnnotations.toString());
         }
     }
 }

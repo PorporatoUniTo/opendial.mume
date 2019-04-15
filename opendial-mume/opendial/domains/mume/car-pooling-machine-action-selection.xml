@@ -33,7 +33,79 @@
         </rule>
 
         <!-- If some some information is missing... -->
-        <!-- LATER
+        <rule id="MissingStartDateInformation">
+            <case>
+                <condition>
+                    <if var="update" value="true"/>
+
+                    <if var="a_u" value="BOOKING"/>
+                    <if var="state" value="INFORMATION_EXTRACTION"/>
+                    <if var="startDate" value="Missing"/>
+                </condition>
+                <effect util="8">
+                    <set var="state" value="INFORMATION_EXTRACTION"/>
+                    <set var="a_m" value="ASK_INFO_START_DATE"/>
+
+                    <set var="update" value="null"/>
+                </effect>
+            </case>
+        </rule>
+        <!--
+        <rule id="MissingEndDateInformation">
+            <case>
+                <condition>
+                    <if var="update" value="true"/>
+
+                    <if var="a_u" value="BOOKING"/>
+                    <if var="state" value="INFORMATION_EXTRACTION"/>
+                    <if var="endDate" value="Missing"/>
+                </condition>
+                <effect util="7">
+                    <set var="state" value="INFORMATION_EXTRACTION"/>
+                    <set var="a_m" value="ASK_INFO_END_DATE"/>
+
+                    <set var="update" value="null"/>
+                </effect>
+            </case>
+        </rule>
+        -->
+        <rule id="MissingStartTimeInformation">
+            <case>
+                <condition>
+                    <if var="update" value="true"/>
+
+                    <if var="a_u" value="BOOKING"/>
+                    <if var="state" value="INFORMATION_EXTRACTION"/>
+                    <if var="startTime" value="Missing"/>
+                </condition>
+                <effect util="6">
+                    <set var="state" value="INFORMATION_EXTRACTION"/>
+                    <set var="a_m" value="ASK_INFO_START_TIME"/>
+
+                    <set var="update" value="null"/>
+                </effect>
+            </case>
+        </rule>
+        <!--
+        <rule id="MissingEndTimeInformation">
+            <case>
+                <condition>
+                    <if var="update" value="true"/>
+
+                    <if var="a_u" value="BOOKING"/>
+                    <if var="state" value="INFORMATION_EXTRACTION"/>
+                    <if var="endTime" value="Missing"/>
+                </condition>
+                <effect util="5">
+                    <set var="state" value="INFORMATION_EXTRACTION"/>
+                    <set var="a_m" value="ASK_INFO_END_TIME"/>
+
+                    <set var="update" value="null"/>
+                </effect>
+            </case>
+        </rule>
+        -->
+        <!-- LATER if the principal slot is not available, the user may be selecting another one (sortedStartSlots, ?)
         <rule id="MissingStartSlotInformation">
             <case>
                 <condition>
@@ -44,7 +116,7 @@
                     <if var="startCity" relation="!=" value="Missing"/>
                     <if var="startSlot" value="Missing"/>
                 </condition>
-                <effect util="8">
+                <effect util="4">
                     <set var="state" value="INFORMATION_EXTRACTION"/>
                     <set var="a_m" value="SELECT_START_SLOT"/>
 
@@ -62,7 +134,7 @@
                     <if var="state" value="INFORMATION_EXTRACTION"/>
                     <if var="startSlot" value="Missing"/>
                 </condition>
-                <effect util="7">
+                <effect util="4">
                     <set var="state" value="INFORMATION_EXTRACTION"/>
                     <set var="a_m" value="ASK_INFO_START_SLOT"/>
 
@@ -80,7 +152,7 @@
                     <if var="state" value="INFORMATION_EXTRACTION"/>
                     <if var="startCity" value="Missing"/>
                 </condition>
-                <effect util="7">
+                <effect util="3">
                     <set var="state" value="INFORMATION_EXTRACTION"/>
                     <set var="a_m" value="ASK_START_CITY"/>
 
@@ -99,7 +171,7 @@
                     <if var="state" value="INFORMATION_EXTRACTION"/>
                     <if var="endSlot" value="Missing"/>
                 </condition>
-                <effect util="6">
+                <effect util="2">
                     <set var="state" value="INFORMATION_EXTRACTION"/>
                     <set var="a_m" value="ASK_INFO_END_SLOT"/>
 
@@ -109,78 +181,6 @@
         </rule>
         -->
         <!--
-        <rule id="MissingStartDateInformation">
-            <case>
-                <condition>
-                    <if var="update" value="true"/>
-
-                    <if var="a_u" value="BOOKING"/>
-                    <if var="state" value="INFORMATION_EXTRACTION"/>
-                    <if var="startDate" value="Missing"/>
-                </condition>
-                <effect util="5">
-                    <set var="state" value="INFORMATION_EXTRACTION"/>
-                    <set var="a_m" value="ASK_INFO_START_DATE"/>
-
-                    <set var="update" value="null"/>
-                </effect>
-            </case>
-        </rule>
-        -->
-        <!--
-        <rule id="MissingEndDateInformation">
-            <case>
-                <condition>
-                    <if var="update" value="true"/>
-
-                    <if var="a_u" value="BOOKING"/>
-                    <if var="state" value="INFORMATION_EXTRACTION"/>
-                    <if var="endDate" value="Missing"/>
-                </condition>
-                <effect util="4">
-                    <set var="state" value="INFORMATION_EXTRACTION"/>
-                    <set var="a_m" value="ASK_INFO_END_DATE"/>
-
-                    <set var="update" value="null"/>
-                </effect>
-            </case>
-        </rule>
-        -->
-        <rule id="MissingStartTimeInformation">
-            <case>
-                <condition>
-                    <if var="update" value="true"/>
-
-                    <if var="a_u" value="BOOKING"/>
-                    <if var="state" value="INFORMATION_EXTRACTION"/>
-                    <if var="startTime" value="Missing"/>
-                </condition>
-                <effect util="3">
-                    <set var="state" value="INFORMATION_EXTRACTION"/>
-                    <set var="a_m" value="ASK_INFO_START_TIME"/>
-
-                    <set var="update" value="null"/>
-                </effect>
-            </case>
-        </rule>
-        <!--
-        <rule id="MissingEndTimeInformation">
-            <case>
-                <condition>
-                    <if var="update" value="true"/>
-
-                    <if var="a_u" value="BOOKING"/>
-                    <if var="state" value="INFORMATION_EXTRACTION"/>
-                    <if var="endTime" value="Missing"/>
-                </condition>
-                <effect util="2">
-                    <set var="state" value="INFORMATION_EXTRACTION"/>
-                    <set var="a_m" value="ASK_INFO_END_TIME"/>
-
-                    <set var="update" value="null"/>
-                </effect>
-            </case>
-        </rule>
         <rule id="MissingVehicleTypeInformation">
             <case>
                 <condition>

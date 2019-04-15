@@ -11,10 +11,14 @@ import eu.fbk.dh.tint.runner.TintPipeline;
 import opendial.DialogueState;
 import opendial.DialogueSystem;
 import opendial.modules.Module;
+import opendial.modules.mume.information.LocationInfo;
 
 import java.io.*;
 import java.time.ZonedDateTime;
 import java.util.*;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+import java.util.stream.Collectors;
 
 import static opendial.modules.mume.config.Config.*;
 import static opendial.modules.mume.config.Shared.*;
@@ -136,20 +140,21 @@ public class CarPoolingInformationExtraction implements Module {
             Map<String, String> information = new HashMap<>();
             Map<String, String> previousInformation = new HashMap<>();
             String[] infoSlots = {
-                    "startDate",
-                    "startTime",
-                    "startCity",
-                    "startSlot",
-                    "startLat",
-                    "startLon",
+                    START_DATE,
+                    START_TIME,
+                    START_CITY,
+                    START_SLOT,
+                    START_LAT,
+                    START_LON,
 
-                    "endDate",
-                    "endCity",
-                    "endSlot",
-                    "endLat",
-                    "endLon",
-                    "endTime",
-                    "vehicleType"
+                    END_DATE,
+                    END_TIME,
+                    END_CITY,
+                    END_SLOT,
+                    END_LAT,
+                    END_LON,
+
+                    VEHICLE_TYPE
             };
 
             Arrays.stream(infoSlots).forEach(slot -> {
@@ -165,14 +170,16 @@ public class CarPoolingInformationExtraction implements Module {
             // 'Vorrei prenotare l'auto in piazza Vittorio Veneto a Pinerolo per domani dalle 14 alle sette'
             log.info("User said: '" + userUtterance + "'");
 
-            String machinePrevState = "";
-            if (state.hasChanceNode("a_m-prev"))
-                machinePrevState = state.queryProb("a_m-prev").getBest().toString();
+            if (userUtterance != null && !userUtterance.isEmpty()) {
+                String machinePrevState = "";
+                if (state.hasChanceNode("a_m-prev")) {
+                    machinePrevState = state.queryProb("a_m-prev").getBest().toString();
+                    log.info("Prev State:\t" + machinePrevState);
+                }
 
-            ZonedDateTime now = ZonedDateTime.now();
-            userUtterance = correctUserUtterance(userUtterance, machinePrevState, now,
-                    (!information.get("startDate").equals(NONE)) ? information.get("startDate") : "");
-            log.info("Corrected user utterance: '" + userUtterance + "'");
+                ZonedDateTime now = ZonedDateTime.now();
+                userUtterance = correctUserUtterance(userUtterance, machinePrevState, now, information.getOrDefault(START_DATE, NONE));
+                log.info("Corrected user utterance: '" + userUtterance + "'");
 
             /* Real cedit card needed /
             try {
@@ -199,11 +206,11 @@ public class CarPoolingInformationExtraction implements Module {
             }
             */
 
-            Annotation annotation;
-            // try {
-            // annotation = pipeline.run(stream, jsonOut, TintRunner.OutputFormat.JSON);
-            // annotation = pipeline.run(stream, System.out, TintRunner.OutputFormat.JSON);
-            annotation = pipeline.runRaw(userUtterance);
+                Annotation annotation;
+                // try {
+                // annotation = pipeline.run(stream, jsonOut, TintRunner.OutputFormat.JSON);
+                // annotation = pipeline.run(stream, System.out, TintRunner.OutputFormat.JSON);
+                annotation = pipeline.runRaw(userUtterance);
 
             /* See previous comment /
             log.info("TIMEX3: " + String.valueOf(annotation.get(HeidelTimeAnnotations.TimexesAnnotation.class).size()));
@@ -213,10 +220,10 @@ public class CarPoolingInformationExtraction implements Module {
             LinkedTreeMap json = (LinkedTreeMap) gsonOut.fromJson(bufferedReader, Object.class);
             */
 
-            /*
-             * LogOutputStream
-             * https://web.archive.org/web/20130527080241/http://www.java2s.com/Open-Source/Java/Testing/jacareto/jacareto/toolkit/log4j/LogOutputStream.java.htm
-             */
+                /*
+                 * LogOutputStream
+                 * https://web.archive.org/web/20130527080241/http://www.java2s.com/Open-Source/Java/Testing/jacareto/jacareto/toolkit/log4j/LogOutputStream.java.htm
+                 */
 
             /* TESTS
             // log.info(json.toString());
@@ -372,85 +379,120 @@ public class CarPoolingInformationExtraction implements Module {
             }
             */
 
-            // NO TEST
-            List<CoreLabel> tokens = annotation.get(CoreAnnotations.TokensAnnotation.class);
-            List<CoreMap> sentences = annotation.get(CoreAnnotations.SentencesAnnotation.class);
-            // There is only one sentence: property 'ita_toksent.ssplitOnlyOnNewLine=true' in Tint's default-config.properties
-            SemanticGraph dependencies = sentences.get(0).get(SemanticGraphCoreAnnotations.EnhancedPlusPlusDependenciesAnnotation.class);
+                // NO TEST
+                List<CoreLabel> tokens = annotation.get(CoreAnnotations.TokensAnnotation.class);
+                List<CoreMap> sentences = annotation.get(CoreAnnotations.SentencesAnnotation.class);
+                // There is only one sentence: property 'ita_toksent.ssplitOnlyOnNewLine=true' in Tint's default-config.properties
+                SemanticGraph dependencies = sentences.get(0).get(SemanticGraphCoreAnnotations.EnhancedPlusPlusDependenciesAnnotation.class);
 
-            List<List<IndexedWord>> locationAnnotations = new ArrayList<>();
-            List<List<IndexedWord>> dateAnnotations = new ArrayList<>();
-            List<List<IndexedWord>> timeAnnotations = new ArrayList<>();
-            List<List<IndexedWord>> durationAnnotations = new ArrayList<>();
-            /* True if the token in exam parteins to the current (multi-word) NER */
-            boolean inNER = false;
-            /* Tokens and IndexedWords of the current (multi-word) NER */
-            List<IndexedWord> currentNERIndexedWords = new ArrayList<>();
-            /* The NER type of the next token */
-            String nerType;
-            String currentNERType = NO_NER;
+                List<List<IndexedWord>> locationAnnotations = new ArrayList<>();
+                List<List<IndexedWord>> dateAnnotations = new ArrayList<>();
+                List<List<IndexedWord>> timeAnnotations = new ArrayList<>();
+                List<List<IndexedWord>> durationAnnotations = new ArrayList<>();
+                /* True if the token in exam parteins to the current (multi-word) NER */
+                boolean inNER = false;
+                /* Tokens and IndexedWords of the current (multi-word) NER */
+                List<IndexedWord> currentNERIndexedWords = new ArrayList<>();
+                /* The NER type of the next token */
+                String nerType;
+                String currentNERType = NO_NER;
 
-            for (CoreLabel token : tokens) {
-                nerType = token.get(CoreAnnotations.NamedEntityTagAnnotation.class);
+                for (CoreLabel token : tokens) {
+                    nerType = token.get(CoreAnnotations.NamedEntityTagAnnotation.class);
 
-                if (inNER && !nerType.equals(currentNERType)) {
-                    // The current NER is complete
-                    switch (currentNERType) {
-                        case "LOC":
-                            locationAnnotations.add(currentNERIndexedWords);
-                            break;
-                        case "DATE":
-                            dateAnnotations.add(new ArrayList<>(currentNERIndexedWords));
-                            break;
-                        case "TIME":
-                            timeAnnotations.add(new ArrayList<>(currentNERIndexedWords));
-                            break;
-                        case "DURATION":
-                            durationAnnotations.add(new ArrayList<>(currentNERIndexedWords));
-                            break;
-                        default:
-                    }
+                    if (inNER && !nerType.equals(currentNERType)) {
+                        // The current NER is complete
+                        switch (currentNERType) {
+                            case "LOC":
+                                locationAnnotations.add(currentNERIndexedWords);
+                                break;
+                            case "DATE":
+                                dateAnnotations.add(new ArrayList<>(currentNERIndexedWords));
+                                break;
+                            case "TIME":
+                                timeAnnotations.add(new ArrayList<>(currentNERIndexedWords));
+                                break;
+                            case "DURATION":
+                                durationAnnotations.add(new ArrayList<>(currentNERIndexedWords));
+                                break;
+                            default:
+                        }
 
-                    // Leaving the found NER: reset parameters
-                    inNER = false;
-                    currentNERIndexedWords = new ArrayList<>();
-                } else if (!nerType.equals("O") && !inNER) {
-                    // Another NER encountered
-                    inNER = true;
+                        // Leaving the found NER: reset parameters
+                        inNER = false;
+                        currentNERIndexedWords = new ArrayList<>();
+                    } else if (!nerType.equals("O") && !inNER) {
+                        // Another NER encountered
+                        inNER = true;
 
-                    currentNERType = nerType;
-                    currentNERIndexedWords.add(dependencies.getNodeByIndex(token.index()));
-                } else if (inNER && nerType.equals(currentNERType))
-                    // Previous NER continuation
-                    currentNERIndexedWords.add(dependencies.getNodeByIndex(token.index()));
-            }
+                        currentNERType = nerType;
+                        currentNERIndexedWords.add(dependencies.getNodeByIndex(token.index()));
+                    } else if (inNER && nerType.equals(currentNERType))
+                        // Previous NER continuation
+                        currentNERIndexedWords.add(dependencies.getNodeByIndex(token.index()));
+                }
 
 
-            LocationsExtractor.getInstance().extractLocations(annotation, locationAnnotations, information, previousInformation, machinePrevState);
+                List<LocationInfo> noDateAnnotations = LocationsExtractor.getInstance().extractLocations(annotation, locationAnnotations, information, previousInformation, machinePrevState);
 
-            DatesTimesExtractor.getInstance().extractTimeAndDate(annotation, dateAnnotations, timeAnnotations, durationAnnotations, information, previousInformation, machinePrevState);
+                // Set of te indeces of the IndexedWords corresponding to location
+                Set<Integer> noDateIndexedWordIndeces = noDateAnnotations.stream().flatMap(i -> i.getWordList().stream().map(IndexedWord::index)).collect(Collectors.toSet());
+                dateAnnotations = dateAnnotations.stream().filter(l ->  // Retains only those annotations...
+                        // ... whose NERs are not among those in an adress
+                        l.stream().noneMatch(n -> noDateIndexedWordIndeces.contains(n.index()))
+                ).collect(Collectors.toList());
+                DatesTimesExtractor.getInstance().extractTimeAndDate(annotation, dateAnnotations, timeAnnotations, durationAnnotations, information, previousInformation, machinePrevState);
 
-            VehicleTypeExtractor.getInstance().extractVehicleType(userUtterance, information, previousInformation);
+                VehicleTypeExtractor.getInstance().extractVehicleType(userUtterance, information, previousInformation);
 
-            // TODO check errors
-            List<String> errors = new LinkedList<>();
 
-            boolean hasBeenUpdated = false;
-            for (Map.Entry<String, String> info : information.entrySet())
-                if (information.get(info.getKey()).equals(previousInformation.get(info.getKey())))
+                // If the user gave all the required information
+                if (!information.getOrDefault(START_SLOT, NONE).equals(NONE) &&
+                        !information.getOrDefault(START_TIME, NONE).equals(NONE) &&
+                        !information.getOrDefault(START_DATE, NONE).equals(NONE)) {
+                    // Propagate endSlot and endCity information, but not end address:
+                    //  end address can differ from the slot address
+                    if (information.getOrDefault(END_SLOT, NONE).equals(NONE))
+                        information.put(END_SLOT, information.getOrDefault(START_SLOT, NONE));
+                    if (information.getOrDefault(END_CITY, NONE).equals(NONE))
+                        information.put(END_CITY, information.getOrDefault(START_CITY, NONE));
+                }
+
+                // TODO check errors
+                List<String> errors = new LinkedList<>();
+                /*
+                if (!information.get(START_TIME).equals(previousInformation.get(START_TIME)))
+                    checkForTimeErrors(START_TIME, information, now, errors);
+                if (!information.get(END_TIME).equals(previousInformation.get(END_TIME)))
+                    checkForTimeErrors(END_TIME, information, now, errors);
+                if (!information.get(START_DATE).equals(previousInformation.get(START_DATE)))
+                    checkForDateErrors(START_DATE, information, now, errors);
+                if (!information.get(END_DATE).equals(previousInformation.get(END_DATE)))
+                    checkForDateErrors(END_DATE, information, now, errors);
+                */
+
+                boolean hasBeenUpdated = false;
+                for (Map.Entry<String, String> info : information.entrySet())
+                    if (info.getValue().equals(previousInformation.get(info.getKey())))
+                        hasBeenUpdated = true;
+                if (!hasBeenUpdated && !errors.isEmpty())
                     hasBeenUpdated = true;
 
-            information.forEach((s, v) -> {
-                log.info(s + " = " + v);
-                system.addContent(s, v);
-            });
-            if (hasBeenUpdated)
-                if (errors.isEmpty())
-                    system.addContent("update", String.valueOf(true));
-                else {
-                    system.addContent("update", String.valueOf(false));
-                    system.addContent("errors", String.join(",", errors));
-                }
+                log.info("Updated Information:");
+                information.forEach((s, v) -> {
+                    log.info(s + " = " + v);
+                    system.addContent(s, v);
+                });
+                log.info("Errors found:");
+                errors.forEach(log::info);
+                if (hasBeenUpdated)
+                    if (errors.isEmpty())
+                        system.addContent("update", String.valueOf(true));
+                    else {
+                        system.addContent("update", String.valueOf(false));
+                        system.addContent("errors", String.join(",", errors));
+                    }
+            }
         }
     }
 
@@ -481,46 +523,34 @@ public class CarPoolingInformationExtraction implements Module {
      * @return the Italian (lowercase) String name of the month
      */
     private String getMonthName(int monthNumber) {
-        String name = "";
         switch (monthNumber) {
             case 1:
-                name = "gennaio";
-                break;
+                return "gennaio";
             case 2:
-                name = "febbraio";
-                break;
+                return "febbraio";
             case 3:
-                name = "marzo";
-                break;
+                return "marzo";
             case 4:
-                name = "aprile";
-                break;
+                return "aprile";
             case 5:
-                name = "maggio";
-                break;
+                return "maggio";
             case 6:
-                name = "giugno";
-                break;
+                return "giugno";
             case 7:
-                name = "luglio";
-                break;
+                return "luglio";
             case 8:
-                name = "agosto";
-                break;
+                return "agosto";
             case 9:
-                name = "settembre";
-                break;
+                return "settembre";
             case 10:
-                name = "ottobre";
-                break;
+                return "ottobre";
             case 11:
-                name = "novembre";
-                break;
+                return "novembre";
             case 12:
-                name = "dicembre";
-                break;
+                return "dicembre";
+            default:
+                return "";
         }
-        return name;
     }
 
     /**
@@ -535,6 +565,8 @@ public class CarPoolingInformationExtraction implements Module {
         String correctedUtterance = originalUtterance;
         // NO correctedUtterance = correctedUtterance.toLowerCase();
 
+        correctedUtterance = correctedUtterance.replaceAll("\\s+", " ");
+
         /*
          * In one cases the hour starts with a vovel, "all'una":
          *  Delete the apostrophe and add "-le" ("all'una -> alle una") to reduce the possible utterance forms' number.
@@ -542,58 +574,76 @@ public class CarPoolingInformationExtraction implements Module {
         correctedUtterance = correctedUtterance.replace("l'una", "le una");
 
         /*
+         * The user maybe has omitted the month from a date. If it is so, it should be that the user would imply the
+         *  CURRENT MONTH or the month that s/he has ALREADY COMMUNICATED (or was inferred by the system).
+         */
+        if (machinePrevState.endsWith("DATE")) {
+            /*
+             * If the answer is just a number or something in the form "[...] il _NUM_(.?)" (where _NUM_ is a number), the system
+             *  has to infer the month (and possibly the year)
+             /
+            if (correctedUtterance.matches("(Il|il|Dal|dal|Al|al|) (\\d{1,2})")) {
+                boolean addPunctuation = false;
+                if (correctedUtterance.endsWith(".") || correctedUtterance.endsWith(";")) {
+                    correctedUtterance = correctedUtterance.substring(0, correctedUtterance.length() - 1);
+                    addPunctuation = true;
+                }
+                correctedUtterance = correctedUtterance + " " +
+                        // if the user has communicated a "start month"...
+                        ((startDate != null && !startDate.equals(NONE)) ?
+                                // ... then s/he probably imply the same month...
+                                getMonthName(Integer.parseInt(startDate.split("-")[1])) :
+                                // ... otherwise, the current month
+                                getMonthName(now.getMonthValue())) +
+                        ((addPunctuation) ? "." : "");
+            }
+             */
+            Pattern monthDayPattern = Pattern.compile(
+                    "([Ii]l|[Dd]al|[Aa]l) (\\d{1,2})(?! \\d? ([Gg]ennaio|[Ff]ebbraio|[Mm]arzo|[Aa]prile|[Mm]aggio|[Gg]iugno|[Ll]uglio|[Aa]gosto|[Ss]ettembre|[Oo]ttobre|[Nn]ovembre|[Dd]icembre))"
+            );
+            Matcher monthDayMatcher = monthDayPattern.matcher(correctedUtterance);
+            String monthName = "";
+            log.info("Month Name:\t" + monthName);
+            for (String month : new String[]{"gennaio", "febbraio", "marzo", "aprile", "maggio", "giugno", "luglio", "agosto", "settembre", "ottobre", "novembre", "dicembre"})
+                if (correctedUtterance.contains(month))
+                    monthName = month;
+            log.info("Month Name:\t" + monthName);
+            if (monthName.isEmpty())
+                monthName = ((startDate != null && !startDate.equals(NONE)) ?
+                        // ... then s/he probably imply the same month...
+                        getMonthName(Integer.parseInt(startDate.split("-")[1])) :
+                        // ... otherwise, the current month
+                        getMonthName(now.getMonthValue()));
+            while (monthDayMatcher.find()) {
+                log.info("Matcher Match");
+                log.info("Month Name:\t" + monthName);
+                correctedUtterance = monthDayMatcher.replaceAll("$1 $2 " + monthName);
+            }
+        }
+        /*
          * If the user is answering a question by the system, s\he could have possibly omitted a preposition
          * (e.g.: "A che ora vuoi posare l'auto? [alle ]14"): if this is the case, add the preposition.
          */
-        if (machinePrevState.endsWith("TIME")) {
+        else if (machinePrevState.endsWith("TIME")) {
             /*
-             * If the system asked for a time information, the answer shuold (?) contain a preposition such as "alle"
+             * If the system asked for a time information, the answer shuold contain a preposition such as "alle"
              *   (e.g., "A che ora vorresti partire? Alle sette")
              */
-            int timeMaybe = -1;
-            try {
-                timeMaybe = Integer.parseInt(correctedUtterance.trim());
-            } catch (NumberFormatException exception) {
-            }
-            if (!(correctedUtterance.contains("Alle") || correctedUtterance.contains("alle") ||
-                    correctedUtterance.contains("Dalle") || correctedUtterance.contains("dalle") ||
-                    correctedUtterance.contains("Le") || correctedUtterance.contains("le")) ||    // The others are explicitated for clarity, this is more general
-                    timeMaybe > -1)
+            if (!(correctedUtterance.startsWith("Alle") || correctedUtterance.startsWith("alle") ||
+                    correctedUtterance.startsWith("Dalle") || correctedUtterance.startsWith("dalle") ||
+                    correctedUtterance.startsWith("Le") || correctedUtterance.startsWith("le")) &&   // The others are explicitated for clarity, this is more general
+                    correctedUtterance.matches("\\d{1,2}(:\\d\\d)?"))
                 correctedUtterance = "Alle " + correctedUtterance.trim();
             else if (correctedUtterance.startsWith("le"))
                 correctedUtterance = "Al" + correctedUtterance;
             else if (correctedUtterance.startsWith("Le"))
                 correctedUtterance = "Alle " + correctedUtterance.substring(3);
-        } else if (machinePrevState.endsWith("DATE")) {
-            /*
-             * The user maybe has omitted the month from a date. If it is so, it should be that the user would imply the
-             *  CURRENT MONTH or the month that s/he has ALREADY COMMUNICATED.
-             */
-            int dayMaybe = -1;
-            try {
-                if (correctedUtterance.startsWith("il "))
-                    correctedUtterance = correctedUtterance.substring(3);
-                dayMaybe = Integer.parseInt(originalUtterance);
-            } catch (NumberFormatException exception) {
-            }
-            /*
-             * If the answer is just a number or something in the form "il _NUM_" (where _NUM_ is a number), the system
-             *  has to infer the month (and possibly the year)
-             */
-            if (dayMaybe > 0)
-                correctedUtterance = correctedUtterance + " " +
-                        // if the user has communicated a "start month"...
-                        ((!startDate.equals(NONE)) ?
-                                // ... then s/he probably imply the same month...
-                                getMonthName(Integer.parseInt(startDate.split("-")[1])) :
-                                // ... otherwise, the current month
-                                getMonthName(now.getMonthValue()));
         } else if (machinePrevState.endsWith("START_CITY") || machinePrevState.endsWith("START_SLOT")) {
             /*
              * If the user is answering to a question like "Da dove vuoi partire", the utternace should contain the
              *  preposition "da" (e.g.: Da dove vuoi partire? Da Pinerolo)
              */
-            if (!correctedUtterance.startsWith("da "))
+            if (!correctedUtterance.startsWith("da ") && !correctedUtterance.startsWith("dall'"))
                 correctedUtterance = "da " + correctedUtterance;
         } /* THE END CITY IS NOT AN ESSENTIAL INFORMATION: if the user doesn't communicate it, the system doesn't ask.
             else if (machinePrevState.endsWith("END_CITY") || machinePrevState.endsWith("END_SLOT")) {
@@ -606,8 +656,19 @@ public class CarPoolingInformationExtraction implements Module {
         }
         */
 
+        /* Tint has some problem with accented letters in the weekdays names: replace with the non-accented letter (it works fine) */
+        correctedUtterance = correctedUtterance.replaceAll("luned.", "lunedi");
+        correctedUtterance = correctedUtterance.replaceAll("marted.", "martedi");
+        correctedUtterance = correctedUtterance.replaceAll("mercoled.", "mercoledi");
+        correctedUtterance = correctedUtterance.replaceAll("gioved.", "giovedi");
+        correctedUtterance = correctedUtterance.replaceAll("venerd.", "venerdi");
+
+        /* The systma can handler just one sentence at one time */
         String subCorrectedUtterance = correctedUtterance.substring(0, correctedUtterance.length() - 1);
         correctedUtterance = subCorrectedUtterance.replace(".", " e ").replace(";", " e ") + correctedUtterance.charAt(correctedUtterance.length() - 1);
+
+        /* Tint has some problem with the hou format \d\d:\d\d */
+        correctedUtterance = correctedUtterance.replaceAll("(\\d{1,2}):(\\d\\d)", "$1 e $2");
 
         /*
          * IMPORTANT: if the user utterance ends with a named entity (for example 'Voglio partire da piazza Castello')
@@ -616,10 +677,60 @@ public class CarPoolingInformationExtraction implements Module {
          */
         boolean endWithPunct = false;
         for (int i = 0; i < PUNCT.size() && !endWithPunct; i++)
-            if (!originalUtterance.endsWith(PUNCT.get(i)))
+            if (originalUtterance.endsWith(PUNCT.get(i)))
                 endWithPunct = true;
         if (!endWithPunct)
             correctedUtterance = correctedUtterance + ".";
         return correctedUtterance;
+    }
+
+    /**
+     * Check if the user requested a vehicle for a past time (hour).
+     *
+     * @param timeInfoType the String signaling if the time to check if a startTime or a endTime
+     * @param information  the Map<String, String> of all information collected til this point
+     * @param now          the ZoneDateTime of the moment of the request
+     * @param errors       the (to be filled) List<String> of the errors found in the request in exam
+     */
+    private void checkForTimeErrors(String timeInfoType, Map<String, String> information, ZonedDateTime now, List<String> errors) {
+        String[] newDate = information.getOrDefault((timeInfoType.contains(START) ? START_DATE : END_DATE), NONE).split("-");
+        String[] newTime = information.getOrDefault(timeInfoType, NONE).split("-");
+        if (newTime.length > 1 && newDate.length > 2 &&
+                // the time is a past time, or...
+                Integer.parseInt(newDate[0]) == now.getYear() &&
+                Integer.parseInt(newDate[1]) == now.getMonthValue() &&
+                Integer.parseInt(newDate[2]) == now.getDayOfMonth() &&
+                Integer.parseInt(newTime[0]) < now.getHour() ||
+                // the hour is invalid (greater than 23 or less than 0, due to the correction taking in account the start time)
+                //  (this should not happen)
+                (Integer.parseInt(newTime[0]) > 23 || Integer.parseInt(newTime[0]) < 0)) {
+            information.put(timeInfoType, NONE);
+            errors.add(PAST_TIME_ERROR);
+        }
+    }
+
+    /**
+     * Check if the user requested a vehicle for a past date (hour).
+     *
+     * @param dateInfoType the String signaling if the time to check if a startTime or a endTime
+     * @param information  the Map<String, String> of all information collected til this point
+     * @param now          the ZoneDateTime of the moment of the request
+     * @param errors       the (to be filled) List<String> of the errors found in the request in exam
+     */
+    private void checkForDateErrors(String dateInfoType, Map<String, String> information, ZonedDateTime now, List<String> errors) {
+        String[] newDate = information.getOrDefault(dateInfoType, NONE).split("-");
+        if (newDate.length > 1 &&
+                // the year is a past year, or...
+                (Integer.parseInt(newDate[0]) < now.getYear() ||
+                        // the month is a past month, or...
+                        Integer.parseInt(newDate[0]) == now.getYear() &&
+                                Integer.parseInt(newDate[1]) < now.getMonthValue() ||
+                        // the day is a past day, or...
+                        Integer.parseInt(newDate[0]) == now.getYear() &&
+                                Integer.parseInt(newDate[1]) == now.getMonthValue() &&
+                                Integer.parseInt(newDate[2]) < now.getDayOfMonth())) {
+            information.put(dateInfoType, NONE);
+            errors.add(PAST_DATE_ERROR);
+        }
     }
 }

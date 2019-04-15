@@ -18,6 +18,6 @@ public class HaversineDistanceKilometers {
         System.out.println(haversine(44.50, 7.25, 45.50, 8.00)); // 126 kilometers
         System.out.println(haversine(44.50, 7.25, 44.50, 8.00)); // h = 60 kilometers
         System.out.println(haversine(44.50, 7.25, 45.50, 7.25)); // b = 111 kilometers
-        System.out.println(haversine(44.50, 7.25, 44.515, 7.265)); // 0.15|0.15 => ~2 kilometers
+        System.out.println(haversine(44.50, 7.25, 44.515, 7.265)); // 0.1|0.1 => ~1.5 kilometers
     }
 }

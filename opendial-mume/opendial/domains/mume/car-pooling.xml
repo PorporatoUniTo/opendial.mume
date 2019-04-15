@@ -70,7 +70,13 @@
         <variable id="startAddress">
             <value>Missing</value>
         </variable>
+        <variable id="startSlotAddress">
+            <value>Missing</value>
+        </variable>
         <variable id="endAddress">
+            <value>Missing</value>
+        </variable>
+        <variable id="endSlotAddress">
             <value>Missing</value>
         </variable>
         <variable id="startCity">

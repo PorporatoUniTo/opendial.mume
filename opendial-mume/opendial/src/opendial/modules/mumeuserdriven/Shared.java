@@ -43,8 +43,8 @@ public class Shared {
     public static final int QUARTER = 15;
     public static final int HOUR = 60;
 
-    // public static final double DISTANCE_THRESHOLD = 0.15;
-    public static final double DISTANCE_THRESHOLD = 5;
+    // public static final double DISTANCE_THRESHOLD = 0.1;
+    public static final double DISTANCE_THRESHOLD = 1;
 
     // Google Maps
     public static final String KEY = "key=";

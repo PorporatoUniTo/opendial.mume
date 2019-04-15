@@ -1,6 +1,7 @@
 package opendial.modules.mume;
 
 import com.google.gson.JsonArray;
+import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 import opendial.modules.mume.information.City;
@@ -16,12 +17,16 @@ import java.net.URL;
 import java.net.URLConnection;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
-import java.util.*;
+import java.util.Arrays;
+import java.util.LinkedList;
+import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import static opendial.modules.mume.CarPoolingInformationExtraction.*;
 import static opendial.modules.mume.config.Shared.*;
+import static opendial.modules.mume.information.Slot.SLOT_ID_SEPARATOR;
 
 class InferLocationInformation {
     static void inferMissingInfo(Map<String, String> oldInformation,
@@ -30,17 +35,15 @@ class InferLocationInformation {
                                  LocationInfo newSlot,
                                  boolean hereAnswer,
                                  boolean isStart,
-                                 Map<String, String> newInformation) {
+                                 Map<String, String> newInformation,
+                                 String machinePrevState) {
         // Map<String, String> newInformation = new HashMap<>();
-
 
         JsonParser parser = new JsonParser();
 
         City city = null;
         String address = null;
-        List<Slot> slots = null;
-
-        List<Slot> sortedSlots = new ArrayList<>();
+        Slot slot = null;
         double lat = -100.0;
         double lon = -200.0;
         /* The user did not specified a city, so the 'city' variable's value has been inffered by the system */
@@ -63,13 +66,32 @@ class InferLocationInformation {
                 address = oldAddress;
         }
 
-        if (newSlot != null)
-            slots = Slot.getByName(newSlot.getLocation());
-        else {
+        /* Set slot */
+        if (newSlot != null) {
+            List<Slot> slots = Slot.getByName(newSlot.getLocation());
+            City slotCity = City.getByName(oldInformation.getOrDefault((isStart) ? START_CITY : END_CITY, NONE));
+            if (slots != null && slotCity != null)
+                slots = slots.stream().filter(s -> s.getCity().equals(slotCity)).collect(Collectors.toList());
+            if (slots != null && !slots.isEmpty())
+                slot = slots.get(0);
+        } else {
+            // If it has been saved, search for id
+            City slotCity = City.getByName(oldInformation.getOrDefault((isStart) ? START_CITY : END_CITY, NONE));
             String oldSlot = oldInformation.getOrDefault((isStart) ? START_SLOT : END_SLOT, NONE);
             if (!oldSlot.equals(NONE))
-                slots = Slot.getByName(oldSlot);
+                slot = Slot.getById(oldSlot + SLOT_ID_SEPARATOR + slotCity);
         }
+
+        List<Slot> sortedSlots = Arrays.stream(oldInformation.getOrDefault((isStart) ? START_SORTED_SLOTS : END_SORTED_SLOTS, "").split(","))
+                .map(Slot::getById).filter(s -> s != null).collect(Collectors.toList());
+
+        log.info("Partial 1 " + ((isStart) ? "Start" : "End") + " Sorted Slots: " + sortedSlots);
+
+        log.info(((isStart) ? "Start" : "End") + " City : " + city);
+        log.info(((isStart) ? "Start" : "End") + " Address: " + address);
+        log.info(((isStart) ? "Start" : "End") + " Slot: " + slot);
+        log.info(((isStart) ? "Start" : "End") + " Sorted Slots: " + sortedSlots);
+
 
         // String currentUserPosition = getCurrentUserPosition(parser);
         // TESTING: Dipartimento di Informatica
@@ -78,10 +100,32 @@ class InferLocationInformation {
         String[] userPositions = currentUserPosition.split(",");
 
         /* If the user knows the name of the parking slots and give it, no need of Google */
-        if (newSlot != null && slots != null && !slots.isEmpty()) {
-            // Filter the slots based on the city explicitly communicated by the user
-            sortedSlots = sortSlots(slots, false, city, userPositions[0], userPositions[1]);
+        if (newSlot != null && slot != null) {
+            // If the user did not comminicate a city, just retrieve the (first) slots's one
+            if (city == null) {
+                city = slot.getCity();
+                // if there is some ambiguity in the city, signal it
+                inferredCity = !sortedSlots.isEmpty();
+            }
 
+            // If there is at least one slots in the city given by the user (or in general)...
+            // Retrive all the informaiton!
+            // Slot (1)
+            // Slot already set
+            // Address (2)
+            address = slot.getAddress();
+
+            // Latitude (5)
+            lat = slot.getLatitude();
+            // Longitude (6)
+            lon = slot.getLongitude();
+
+            // SortedSlots (7)
+            // Filter the slots based on the city explicitly communicated by the user
+            sortedSlots = sortSlots((sortedSlots.isEmpty()) ? new LinkedList<>(Arrays.asList(Slot.values())) : sortedSlots, false, city, slot.getLatitude(), slot.getLongitude());
+
+            log.info("Partial 2 " + ((isStart) ? "Start" : "End") + " Sorted Slots: " + sortedSlots);
+            // City (3) - InferredCity (4)
             // If the user did not comminicate a city, just retrieve the (first) slots's one
             if (city == null && !sortedSlots.isEmpty()) {
                 city = sortedSlots.get(0).getCity();
@@ -89,35 +133,13 @@ class InferLocationInformation {
                 inferredCity = sortedSlots.size() > 1;
             }
 
-            // If there is at least one slots in the city given by the user (or in general)...
-            if (!sortedSlots.isEmpty()) {
-                // Retrive all the informaiton!
-                // Address (2)
-                address = sortedSlots.get(0).getAddress();
-                // City (3)
-                // 'city' already set
-                // InferredCity (4)
-                // 'inferredCity' already set
-
-                // Latitude (5)
-                lat = sortedSlots.get(0).getLatitude();
-                // Longitude (6)
-                lon = sortedSlots.get(0).getLongitude();
-
-                // SortedSlots (1 - 7)
-                // sortedSlots already set
-
-                // UnspecifiedSlot (8)
-                unspecifiedSlot = false;
-            } /*else
-                    errors.add("Error(" + "NoSlotFound" + ")");
-                    */
-        }
+            // UnspecifiedSlot (8)
+            unspecifiedSlot = false;
+        } /* else
+            errors.add("Error(" + "NoSlotFound" + ")");
+        */
         /* Else, if the user give an address, we can retrieve the nearest slots (or slots) */
         else if (newAddress != null) {
-            // The user did not gave the precise slots
-            unspecifiedSlot = true;
-
             // Construct the partial address for Google to complete
             String toGoogleMaps = address;
             // If the user gave the city,...
@@ -132,66 +154,91 @@ class InferLocationInformation {
 
             // JSON object for the complete address
             JsonObject queryCompletionResult = null;
+
             try {
                 queryCompletionResult = parser.parse(getGoogleMapsResponseJSON(getMapsSearchURL(toGoogleMaps, currentUserPosition), false, "")).getAsJsonObject();
                 log.info("Response:\t" + queryCompletionResult.toString());
             } catch (MalformedURLException | NullPointerException exception) {
                 exception.printStackTrace();
             }
-            if (queryCompletionResult != null && queryCompletionResult.get("status").getAsString().equals("OK")) {
-                JsonObject bestAddress = queryCompletionResult.get("candidates").getAsJsonArray().get(0).getAsJsonObject();
-                address = bestAddress.get(COMPLETE_ADDRESS).getAsString();
 
-                JsonObject location = bestAddress.getAsJsonObject().get("geometry")
+            if (isOK(queryCompletionResult)) {
+                JsonObject location = queryCompletionResult.get(CANDIDATES).getAsJsonArray().get(0).getAsJsonObject().get("geometry")
                         .getAsJsonObject().get("location").getAsJsonObject();
 
-                if (city == null)
-                    try {
-                        JsonObject geoQueryResult = parser.parse(getGoogleMapsResponseJSON(getMapsReverseGeocodingURL(location.get(LATITUDE) + "," + location.get(LONGITUDE), GEOCODING_LOCALITY), false, "")).getAsJsonObject();
-                        if (geoQueryResult != null && geoQueryResult.get("status").getAsString().equals("OK") && geoQueryResult.get(RESULTS).getAsJsonArray().size() > 0) {
-                            City geoCity = City.getByName(geoQueryResult.get(RESULTS).getAsJsonArray().get(0).getAsJsonObject().get(COMPONENTS).getAsJsonArray().get(0).getAsJsonObject().get(LONG_ADDRESS).getAsString().toLowerCase());
-                            if (geoCity != null)
-                                // Ciriè/e
-                                city = geoCity;
+                JsonObject geoQueryResult = null;
+                try {
+                    geoQueryResult = parser.parse(getGoogleMapsResponseJSON(getMapsReverseGeocodingURL(location.get(LATITUDE) + "," + location.get(LONGITUDE), GEOCODING_LOCALITY), false, "")).getAsJsonObject();
+                } catch (MalformedURLException excpetion) {
+                    excpetion.printStackTrace();
+                }
+
+                if (isOK(geoQueryResult) && geoQueryResult.get(RESULTS).getAsJsonArray().size() > 0) {
+                    JsonArray components = geoQueryResult.get(RESULTS).getAsJsonArray().get(0).getAsJsonObject().get(COMPONENTS).getAsJsonArray();
+                    // for (JsonElement component : components) {
+                    for (int i = 0; i < components.size() && (address == null || city == null); i++) {
+                        JsonObject component = components.get(i).getAsJsonObject();
+                        JsonArray types = component.get(COMPONENT_TYPES).getAsJsonArray();
+                        for (JsonElement type : types) {
+                            if (type.getAsString().equals(ROUTE))
+                                address = component.getAsJsonObject().get(LONG_NAME).getAsString();
+                            else if (type.getAsString().equals(LOCALITY) && city == null)
+                                city = City.getByName(component.getAsJsonObject().get(LONG_NAME).getAsString());
                         }
-                    } catch (MalformedURLException excpetion) {
-                        excpetion.printStackTrace();
                     }
 
-                sortedSlots = sortSlots(new LinkedList<>(Arrays.asList(Slot.values())), true, ((!inferredCity) ? city : null), location.get(LATITUDE).getAsString(), location.get(LONGITUDE).getAsString());
+                    sortedSlots = sortSlots(new LinkedList<>(Arrays.asList(Slot.values())), true, ((!inferredCity) ? city : null), Double.parseDouble(location.get(LATITUDE).getAsString()), Double.parseDouble(location.get(LONGITUDE).getAsString()));
 
-                if (!sortedSlots.isEmpty()) {
-                    // Address (2)
-                    // 'address' already set
-                    // City (3)
-                    // 'city' alteady set
-                    // InferredCity (4)
-                    // 'inferredCity' already set
+                    log.info("Partial 3 " + ((isStart) ? "Start" : "End") + " Sorted Slots: " + sortedSlots);
+                    if (!sortedSlots.isEmpty()) {
+                        slot = sortedSlots.get(0);
+                        sortedSlots = sortedSlots.subList(1, sortedSlots.size());
+                    }
 
-                    // Latitude (5)
-                    lat = location.get(LATITUDE).getAsDouble();
-                    // Lobgitude (6)
-                    lon = location.get(LONGITUDE).getAsDouble();
+                    if (slot != null) {
+                        // Slot (1)
+                        // slot already set
+                        // Address (2)
+                        // 'address' already set
+                        // City (3)
+                        // 'city' alteady set
+                        // InferredCity (4)
+                        // 'inferredCity' already set
 
-                    // SortedSlots (1 - 7)
-                    // sortedSlots already set
-                    // sortedSlots = sortedSlots.subList(1, sortedSlots.size());
+                        // Latitude (5)
+                        lat = location.get(LATITUDE).getAsDouble();
+                        // Lobgitude (6)
+                        lon = location.get(LONGITUDE).getAsDouble();
 
-                    // UnspecifiedSlot (8)
-                    unspecifiedSlot = true;
+                        // SortedSlots (7)
+                        // sortedSlots already set
+
+                        // UnspecifiedSlot (8)
+                        // The user did not gave the precise slots
+                        unspecifiedSlot = true;
+                    }
                 }
-            } /*else
-                    errors.add("Error(" + "NoSlotFound" + ")");
-                    */
+            }
+            /*
+            if (slot == null)
+                errors.add("Error(" + "NoSlotFound" + ")");
+             */
         }
         /* Else, if the user communicate just the city, select the slots nearer to s/he position */
-        else if (city != null) {
+        else if (newCity != null) {
             // Retains only the slots in the city specified by the user and sort them by the distance from the current position if the user
-            sortedSlots = sortSlots(Arrays.asList(Slot.values()), true, city, userPositions[0], userPositions[1]);
+            sortedSlots = sortSlots(Arrays.asList(Slot.values()), false, city, Double.parseDouble(userPositions[0]), Double.parseDouble(userPositions[1]));
 
+            log.info("Partial 4 " + ((isStart) ? "Start" : "End") + " Sorted Slots: " + sortedSlots);
             if (!sortedSlots.isEmpty()) {
+                slot = sortedSlots.get(0);
+                sortedSlots = sortedSlots.subList(1, sortedSlots.size());
+            }
+            if (slot != null) {
+                // Slot (1)
+                // 'slot' already set
                 // Address (2)
-                address = sortedSlots.get(0).getAddress();
+                address = slot.getAddress();
                 // City (3)
                 // 'city' already set
                 // InferredCity (4)
@@ -200,9 +247,9 @@ class InferLocationInformation {
                 lat = Double.parseDouble(userPositions[0]);
                 // Longitude (6)
                 lon = Double.parseDouble(userPositions[1]);
-                // SortedSlots (1 - 7)
-                // sortedSlots already set
-                // sortedSlots = sortedSlots.subList(1, sortedSlots.size());
+                // SortedSlots (7)
+                // 'sortedSlots' already set
+
                 // UnspecifiedSlot (8)
                 unspecifiedSlot = true;
             } /*else
@@ -210,25 +257,48 @@ class InferLocationInformation {
                     */
         }
         /* Otherwise, select the nearest slots to the current position of th user if s/he indicate that wants to start from there */
-        else if (hereAnswer) {
+        else if (hereAnswer && machinePrevState.endsWith("SLOT") && slot == null) {
             // Retrive the address and the city of the current user position
+            JsonObject currentUserAddress = null;
             try {
-                JsonObject currentUserAddress = parser.parse(getGoogleMapsResponseJSON(getMapsReverseGeocodingURL(currentUserPosition, GEOCODING_LOCALITY), false, "")).getAsJsonObject();
-                if (currentUserAddress != null && currentUserAddress.get("status").getAsString().equals("OK") && currentUserAddress.get(RESULTS).getAsJsonArray().size() > 0) {
-                    JsonObject bestResult = currentUserAddress.get(RESULTS).getAsJsonArray().get(0).getAsJsonObject();
-                    address = bestResult.get(COMPLETE_ADDRESS).getAsString();
-                    city = City.getByName(bestResult.get(COMPONENTS).getAsJsonArray().get(0).getAsJsonObject().get(LONG_ADDRESS).getAsString());
-                    // Do not ask confirmation about the city, the user does not care
-                    inferredCity = false;
-                }
+                currentUserAddress = parser.parse(getGoogleMapsResponseJSON(getMapsReverseGeocodingURL(currentUserPosition, GEOCODING_LOCALITY), false, "")).getAsJsonObject();
             } catch (MalformedURLException excpetion) {
                 excpetion.printStackTrace();
             }
+            if (isOK(currentUserAddress) && currentUserAddress.get(RESULTS).getAsJsonArray().size() > 0) {
+//                JsonObject bestResult = currentUserAddress.get(RESULTS).getAsJsonArray().get(0).getAsJsonObject();
+//                address = bestResult.get(COMPLETE_ADDRESS).getAsString();
+//                city = City.getByName(bestResult.get(COMPONENTS).getAsJsonArray().get(0).getAsJsonObject().get(LONG_NAME).getAsString());
+                inferredCity = true;
+                JsonArray components = currentUserAddress.get(RESULTS).getAsJsonArray().get(0).getAsJsonObject().get(COMPONENTS).getAsJsonArray();
+                // for (JsonElement component : components) {
+                for (int i = 0; i < components.size() && (address == null || city == null); i++) {
+                    JsonObject component = components.get(i).getAsJsonObject();
+                    JsonArray types = component.get(COMPONENT_TYPES).getAsJsonArray();
+                    for (JsonElement type : types) {
+                        if (type.getAsString().equals(ROUTE))
+                            address = component.getAsJsonObject().get(LONG_NAME).getAsString();
+                        else if (type.getAsString().equals(LOCALITY) && city == null) {
+                            city = City.getByName(component.getAsJsonObject().get(LONG_NAME).getAsString());
+                            // Do not ask confirmation about the city, the user does not care
+                            inferredCity = false;
+                        }
+                    }
+                }
+            }
 
             // Do not filter by city, the user did not give that
-            sortedSlots = sortSlots(Arrays.asList(Slot.values()), true, null, userPositions[0], userPositions[1]);
+            sortedSlots = sortSlots(Arrays.asList(Slot.values()), true, null, Double.parseDouble(userPositions[0]), Double.parseDouble(userPositions[1]));
 
+            log.info("Partial 5 " + ((isStart) ? "Start" : "End") + " Sorted Slots: " + sortedSlots);
             if (!sortedSlots.isEmpty()) {
+                slot = sortedSlots.get(0);
+                sortedSlots = sortedSlots.subList(1, sortedSlots.size());
+            }
+
+            if (slot != null) {
+                // Slot (1)
+                // 'slot' already set
                 // Address (2)
                 // 'address' already set
                 // City (3)
@@ -239,26 +309,21 @@ class InferLocationInformation {
                 lat = Double.parseDouble(userPositions[0]);
                 // Latitude (6)
                 lon = Double.parseDouble(userPositions[1]);
-                // SortedSlots (1 - 7)
-                // sortedSlots already set
-                // sortedSlots = sortedSlots.subList(0, sortedSlots.size());
+                // SortedSlots (7)
+                // 'sortedSlots' already set
                 // UnspecifiedSlot(8)
                 unspecifiedSlot = true;
             }
         }
 
-        // TODO endSlot = startSLot if not stated otherwise
-//        if (!isStart && slots != null && slots.isEmpty() && !oldInformation.get(START_SLOT).equalsIgnoreCase(NONE)) {
-//            slots = Arrays.asList(Slot.getByName(oldInformation.getOrDefault(START_SLOT, "")));
-//        }
-
         log.info("Final " + ((isStart) ? "Start" : "End") + " City : " + city);
         log.info("Final " + ((isStart) ? "Start" : "End") + " Address: " + address);
-        log.info("Final " + ((isStart) ? "Start" : "End") + " Slots: " + slots);
+        log.info("Final " + ((isStart) ? "Start" : "End") + " Slot: " + slot);
+        log.info("Final " + ((isStart) ? "Start" : "End") + " Sorted Slots: " + sortedSlots);
 
-        if (!sortedSlots.isEmpty()) {
-            newInformation.put((isStart) ? START_SLOT : END_SLOT, sortedSlots.get(0).getName()); // 1
-            newInformation.put((isStart) ? START_SORTED_SLOTS : END_SORTED_SLOTS, sortedSlots.subList(1, sortedSlots.size()).stream().map(Slot::toString).collect(Collectors.joining(",")));  // 7
+        if (slot != null) {
+            newInformation.put((isStart) ? START_SLOT : END_SLOT, slot.getName()); // 1
+            newInformation.put((isStart) ? START_SORTED_SLOTS : END_SORTED_SLOTS, sortedSlots.stream().map(Slot::toString).collect(Collectors.joining(",")));  // 7
             newInformation.put((isStart) ? START_LAT : END_LAT, String.valueOf(lat)   // 5
                     /* Avoids characters problems */
                     .replace(".", "_"));
@@ -276,50 +341,54 @@ class InferLocationInformation {
 
 
         // Geocoding
-            /*
-            JsonParser parser = new JsonParser();
-            boolean waitBetweenRequests = false;
-            if (!information.get(START_CITY).equals(NONE) && !information.get(START_SLOT).equals(NONE) &&
-                    (!information.getOrDefault(START_SLOT, NONE).equals(oldInformation.get(START_SLOT)) ||
-                            !information.getOrDefault(START_CITY, NONE).equals(oldInformation.get(START_CITY)))) {
-                String nominatimResponse = getNominatimJSON(information.get(START_SLOT) + " " + information.get(START_CITY));
+        /*
+        JsonParser parser = new JsonParser();
+        boolean waitBetweenRequests = false;
+        if (!oldInformation.get(START_CITY).equals(NONE) && !oldInformation.get(START_SLOT).equals(NONE) &&
+                (!oldInformation.getOrDefault(START_SLOT, NONE).equals(oldInformation.get(START_SLOT)) ||
+                        !oldInformation.getOrDefault(START_CITY, NONE).equals(oldInformation.get(START_CITY)))) {
+            String nominatimResponse = getNominatimJSON(oldInformation.get(START_SLOT) + " " + oldInformation.get(START_CITY));
 
-                JsonArray locations = (JsonArray) parser.parse(nominatimResponse);
-                if (locations.size() > 0) {
-                    information.put(START_LAT, locations.get(0).getAsJsonObject().get(LATITUDE).getAsString());
-                    information.put(START_LON, locations.get(0).getAsJsonObject().get(LONGITUDE).getAsString());
-                }
-                waitBetweenRequests = true;
+            JsonArray locations = (JsonArray) parser.parse(nominatimResponse);
+            if (locations.size() > 0) {
+                newInformation.put(START_LAT, locations.get(0).getAsJsonObject().get(LATITUDE).getAsString());
+                newInformation.put(START_LON, locations.get(0).getAsJsonObject().get(LONGITUDE).getAsString());
             }
-            if (!information.get(END_CITY).equals(NONE) && !information.get(END_SLOT).equals(NONE) &&
-                    (!information.getOrDefault(END_SLOT, NONE).equals(oldInformation.get(END_SLOT)) ||
-                            !information.getOrDefault(END_CITY, NONE).equals(oldInformation.get(END_CITY)))) {
-                if (waitBetweenRequests) {
-                    try {
-                        Thread.sleep(NOMINATIM_TIMEOUT);
-                    } catch (InterruptedException e) {
-                        e.printStackTrace();
-                    }
-                }
-                String nominatimResponse = getNominatimJSON(information.get(END_SLOT) + " " + information.get(END_CITY));
-
-                JsonArray locations = (JsonArray) parser.parse(nominatimResponse);
-                if (locations.size() > 0) {
-                    information.put(END_LAT, locations.get(0).getAsJsonObject().get(LATITUDE).getAsString());
-                    information.put(END_LON, locations.get(0).getAsJsonObject().get(LONGITUDE).getAsString());
+            waitBetweenRequests = true;
+        }
+        if (!oldInformation.get(END_CITY).equals(NONE) && !oldInformation.get(END_SLOT).equals(NONE) &&
+                (!oldInformation.getOrDefault(END_SLOT, NONE).equals(oldInformation.get(END_SLOT)) ||
+                        !oldInformation.getOrDefault(END_CITY, NONE).equals(oldInformation.get(END_CITY)))) {
+            if (waitBetweenRequests) {
+                try {
+                    Thread.sleep(NOMINATIM_TIMEOUT);
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
                 }
             }
-            */
+            String nominatimResponse = getNominatimJSON(oldInformation.get(END_SLOT) + " " + oldInformation.get(END_CITY));
+
+            JsonArray locations = (JsonArray) parser.parse(nominatimResponse);
+            if (locations.size() > 0) {
+                newInformation.put(END_LAT, locations.get(0).getAsJsonObject().get(LATITUDE).getAsString());
+                newInformation.put(END_LON, locations.get(0).getAsJsonObject().get(LONGITUDE).getAsString());
+            }
+        }
+        */
     }
 
-    private static List<Slot> sortSlots(List<Slot> slots, boolean filterDistance, City filterCity, String biasLatitude, String biasLongitude) {
+    private static boolean isOK(JsonObject queryReult) {
+        return queryReult != null && queryReult.get("status").getAsString().equals("OK");
+    }
+
+    private static List<Slot> sortSlots(List<Slot> slots, boolean filterDistance, City filterCity, double biasLatitude, double biasLongitude) {
         Stream<Slot> sortedSlotsStream = slots.stream();
 
         // Filter by distance from the specified start point (if the slot was not given)
         if (filterDistance)
             sortedSlotsStream = sortedSlotsStream.filter(s -> {
-                double latDiff = Double.parseDouble(biasLatitude) - s.getLatitude();
-                double lonDiff = Double.parseDouble(biasLongitude) - s.getLongitude();
+                double latDiff = biasLatitude - s.getLatitude();
+                double lonDiff = biasLongitude - s.getLongitude();
                 return Math.sqrt(latDiff * latDiff + lonDiff * lonDiff) < DISTANCE_THRESHOLD;
             });
 
@@ -329,10 +398,10 @@ class InferLocationInformation {
 
         // then sort by distance from the specified start point and return
         return sortedSlotsStream.sorted((s1, s2) -> {
-            double latDiff1 = Double.parseDouble(biasLatitude) - s1.getLatitude();
-            double lonDiff1 = Double.parseDouble(biasLongitude) - s1.getLongitude();
-            double latDiff2 = Double.parseDouble(biasLatitude) - s2.getLatitude();
-            double lonDiff2 = Double.parseDouble(biasLongitude) - s2.getLongitude();
+            double latDiff1 = biasLatitude - s1.getLatitude();
+            double lonDiff1 = biasLongitude - s1.getLongitude();
+            double latDiff2 = biasLatitude - s2.getLatitude();
+            double lonDiff2 = biasLongitude - s2.getLongitude();
             return Double.compare(Math.sqrt(latDiff1 * latDiff1 + lonDiff1 * lonDiff1), Math.sqrt(latDiff2 * latDiff2 + lonDiff2 * lonDiff2));
         }).collect(Collectors.toList());
     }
@@ -390,7 +459,7 @@ class InferLocationInformation {
             jsonQuery.add("wifiAccessPoints", wifiAccessPoints);
             log.info("User Current Position Request:\t" + jsonQuery.toString());
             JsonObject userCurrentPositionObject = parser.parse(getGoogleMapsResponseJSON(getMapsGeolocationURL(), true, jsonQuery.toString())).getAsJsonObject().get("location").getAsJsonObject();
-            if (userCurrentPositionObject.get("status").getAsString().equals("OK"))
+            if (isOK(userCurrentPositionObject))
                 return userCurrentPositionObject.get(LATITUDE) + "," + userCurrentPositionObject.get(LONGITUDE);
             else
                 return "";

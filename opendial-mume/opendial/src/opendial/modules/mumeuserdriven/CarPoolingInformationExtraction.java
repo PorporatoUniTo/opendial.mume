@@ -298,7 +298,7 @@ public class CarPoolingInformationExtraction implements Module {
             SemanticGraph dependencies = sentences.get(0).get(SemanticGraphCoreAnnotations.EnhancedPlusPlusDependenciesAnnotation.class);
             */
 
-            // List<List<IndexedWord>> locationAnnotations = new ArrayList<>();
+            List<List<IndexedWord>> locationAnnotations = new ArrayList<>();
             List<List<IndexedWord>> dateAnnotations = new ArrayList<>();
             List<List<IndexedWord>> timeAnnotations = new ArrayList<>();
             List<List<IndexedWord>> durationAnnotations = new ArrayList<>();
@@ -316,11 +316,9 @@ public class CarPoolingInformationExtraction implements Module {
                 if (inNER && !nerType.equals(currentNERType)) {
                     // The current NER is complete
                     switch (currentNERType) {
-                        /*
                         case "LOC":
                             locationAnnotations.add(currentNERIndexedWords);
                             break;
-                        */
                         case "DATE":
                             dateAnnotations.add(new ArrayList<>(currentNERIndexedWords));
                             break;
@@ -351,7 +349,7 @@ public class CarPoolingInformationExtraction implements Module {
             List<City> cities = new ArrayList<>();
             List<List<IndexedWord>> addresses = new ArrayList<>();
 
-            partitionLocation(tokens, dependencies, addresses, slots, cities);
+            partitionLocation(tokens, dependencies, locationAnnotations, addresses, slots, cities);
 
             log.info("Slots:\t" + slots.stream().map(Slot::toString).collect(Collectors.joining(",\n", "[", "]")));
             log.info("Cities:\t" + cities.stream().map(City::toString).collect(Collectors.joining(",\n", "[", "]")));
@@ -383,7 +381,7 @@ public class CarPoolingInformationExtraction implements Module {
                     }
 
 
-                    // FIXME check time corrections
+                    // TODO check time corrections
                     // FIXME minutes in letters are a problem
                     boolean timeInLetters = !timeAnnotations.get(0).stream().map(IndexedWord::originalText).collect(Collectors.joining(" ")).matches("[^\\d]*\\d+[^\\d]*");
 
@@ -413,6 +411,14 @@ public class CarPoolingInformationExtraction implements Module {
                                         roundedMinutes / HOUR
                                 ),
                                 (roundedMinutes % HOUR));
+
+                        if (time.isEmpty() && !durationAnnotations.isEmpty()) {
+                            // Separate the duration of dateTtime
+                            String[] durString = durationAnnotations.get(0).get(0).get(CoreAnnotations.NormalizedNamedEntityTagAnnotation.class).split("T");
+                            // Delete initial 'P'
+                            durString[0] = durString[0].substring(1);
+
+                        }
                     }
                 } else if (checkForNowAnswer(tokens)) {
                     int roundedMinutes = roundToPreviousQuarter(now.getMinute());
@@ -426,6 +432,7 @@ public class CarPoolingInformationExtraction implements Module {
                     time = String.format("%02d:%02d", (incHour) ? now.getHour() + 1 : now.getHour(), roundedMinutes);
                     date = String.format("%04d-%02d-%02d", now.getYear(), now.getMonthValue(), now.getDayOfMonth());
                 }
+
 
                 if (!time.isEmpty())
                     processedTimeAnnotations.add("Time(" + time
@@ -521,7 +528,7 @@ public class CarPoolingInformationExtraction implements Module {
                         // UnspecifiedSlot (8)
                         floatingStartSlot = false;
                     } /*else
-                    errors.add("Error(" + "NoSlotFound" + ")");
+                    errors.add("Error(" + "NoSlotFoundError" + ")");
                     */
                 }
                 /* Else, if the user give an address, we can retrieve the nearest slot (or slots) */
@@ -637,7 +644,7 @@ public class CarPoolingInformationExtraction implements Module {
                     */
 
                     // Retains only the slot in the city specified by the user and sort them by the distance from the current position if the user
-                    sortedSlots = sortSlots(Arrays.asList(Slot.values()), true, city, userPositions[0], userPositions[1]);
+                    sortedSlots = sortSlots(Arrays.asList(Slot.values()), false, city, userPositions[0], userPositions[1]);
 
                     if (!sortedSlots.isEmpty()) {
                         // Slot (1)
@@ -752,9 +759,9 @@ public class CarPoolingInformationExtraction implements Module {
                         .replace("Date(", "").replace(")", "").split("-");
                 String[] newTime = processedTimeAnnotations.stream().filter(d -> d.startsWith("Time")).findFirst().orElse("Time()")
                         .replace("Time(", "").replace(")", "").split("-");
-                if (
-                    // the year is a past year, or...
-                        Integer.parseInt(newDate[0]) < now.getYear() ||
+                if (newDate.length > 1 &&
+                        // the year is a past year, or...
+                        (Integer.parseInt(newDate[0]) < now.getYear() ||
                                 // the month is a past month, or...
                                 Integer.parseInt(newDate[0]) == now.getYear() &&
                                         Integer.parseInt(newDate[1]) < now.getMonthValue() ||
@@ -766,10 +773,10 @@ public class CarPoolingInformationExtraction implements Module {
                                 Integer.parseInt(newDate[0]) == now.getYear() &&
                                         Integer.parseInt(newDate[1]) == now.getMonthValue() &&
                                         Integer.parseInt(newDate[2]) == now.getDayOfMonth() &&
-                                        Integer.parseInt(newTime[0]) < now.getHour() ||
-                                // the hour is invalid (greater than 23 or less than 0, due to the correction taking in account the start time)
-                                //  (this should not happen)
-                                Integer.parseInt(newTime[0]) > 23 || Integer.parseInt(newTime[0]) < 0) {
+                                        (newTime.length > 1 && Integer.parseInt(newTime[0]) < now.getHour())) ||
+                        // the hour is invalid (greater than 23 or less than 0, due to the correction taking in account the start time)
+                        //  (this should not happen)
+                        newTime.length > 1 && (Integer.parseInt(newTime[0]) > 23 || Integer.parseInt(newTime[0]) < 0)) {
                     errors.add("Error(" + "PastTimeError" + ")");
                 }
 
@@ -914,15 +921,16 @@ public class CarPoolingInformationExtraction implements Module {
     }
 
     /**
-     * Separates cities' NERs from addresses' NERs.
+     * Separates cities' NERs from addresses' NERs and slots' NERs.
      *
-     * @param tokens       the List<IndexedWord> of tokens found in the (corrected) user utterance
-     * @param dependencies the SemanticGraph of the user utterance's dependencies
-     * @param addresses    the (to-be-filled) List<LocationInfo> of addresses' NERs
-     * @param slots        the (to-be-filled) List<LocationInfo> of slots' NERs
-     * @param cities       the (to-be-filled) List<LocationInfo> of cities' NERs
+     * @param tokens              the List<IndexedWord> of tokens found in the (corrected) user utterance
+     * @param dependencies        the SemanticGraph of the user utterance's dependencies
+     * @param locationAnnotations the List<List<IndexedWord>> of the location recognised by Tint (if any)
+     * @param addresses           the (to-be-filled) List<LocationInfo> of addresses' NERs
+     * @param slots               the (to-be-filled) List<LocationInfo> of slots' NERs
+     * @param cities              the (to-be-filled) List<LocationInfo> of cities' NERs
      */
-    private void partitionLocation(List<CoreLabel> tokens, SemanticGraph dependencies, List<List<IndexedWord>> addresses, List<Slot> slots, List<City> cities) {
+    private void partitionLocation(List<CoreLabel> tokens, SemanticGraph dependencies, List<List<IndexedWord>> locationAnnotations, List<List<IndexedWord>> addresses, List<Slot> slots, List<City> cities) {
         Set<Integer> indexToCheck = tokens.stream().map(CoreLabel::index).collect(Collectors.toSet());
 
         // ADDRESSES
@@ -1018,6 +1026,11 @@ public class CarPoolingInformationExtraction implements Module {
             for (Slot newSlot : newSlots)
                 if (!slots.contains(newSlot))
                     slots.add(newSlot);
+        }
+
+        for (List<IndexedWord> loc : locationAnnotations) {
+            if (indexToCheck.containsAll(loc.stream().map(IndexedWord::index).collect(Collectors.toSet())))
+                addresses.add(loc);
         }
     }
 

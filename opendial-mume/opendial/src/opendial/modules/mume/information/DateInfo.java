@@ -13,6 +13,8 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.stream.Collectors;
 
+import static opendial.modules.mume.config.Shared.CASES;
+
 public class DateInfo {
     public static final int WEEK_DAY_NUMBER = 7;
     public static final int YEAR_MONTH_NUMBER = 12;
@@ -34,19 +36,18 @@ public class DateInfo {
     public boolean isNow;
 
     public DateInfo(List<IndexedWord> ner, List<CoreLabel> tokens, SemanticGraph dependencies) {
-        /* IMPORTANT: there is a shift of +1 between IndexedWord.index() and TokensAnnotation's index */
+        /* IMPORTANT: IndexedWord.index() and TokensAnnotation's index starts from 1 */
         String dateContent = tokens.get(ner.get(0).index() - 1).get(CoreAnnotations.NormalizedNamedEntityTagAnnotation.class);
         if (dateContent.equals(PRESENT_REF)) {
             date = ZonedDateTime.now().format(DateTimeFormatter.ISO_LOCAL_DATE);    // Convert to YYYY-MM-DD format any refernce about "now" by the user
             isNow = true;
-        }
-        else {
+        } else {
             date = dateContent.split("T")[0];
             isNow = false;
         }
 
         wordList = ner;
-        /* IMPORTANT: there is a shift of +1 between IndexedWord.index() and TokensAnnotation's index */
+        /* IMPORTANT: IndexedWord.index() and TokensAnnotation's index starts from 1 */
         // tokenList = ner.stream().map(w -> tokens.get(w.index() - 1)).collect(Collectors.toList());
 
         // beginCharIndex = ner.get(0).beginPosition();
@@ -59,9 +60,10 @@ public class DateInfo {
         boolean verbFound = false;
         while (!verbFound && pathToRootIterator.hasNext()) {
             IndexedWord currentParent = pathToRootIterator.next();
-            /* IMPORTANT: there is a shift of +1 between IndexedWord.index() and TokensAnnotation's index */
+            /* IMPORTANT: IndexedWord.index() and TokensAnnotation's index starts from 1 */
             CoreLabel currentToken = tokens.get(currentParent.index() - 1);
-            if (currentToken.get(CoreAnnotations.PartOfSpeechAnnotation.class).equals("V")) {
+            if (currentToken.get(CoreAnnotations.PartOfSpeechAnnotation.class).equals("V") ||
+                    currentToken.get(CoreAnnotations.PartOfSpeechAnnotation.class).startsWith("V+")) {
                 verbFound = true;
                 firstVerbGovernorWord = currentParent;
                 // firstVerbGovernorToken = currentToken;
@@ -72,7 +74,7 @@ public class DateInfo {
             boolean modalFound = false;
             while (!modalFound && secondPathToRootIterator.hasNext()) {
                 IndexedWord currentParent = secondPathToRootIterator.next();
-                /* IMPORTANT: there is a shift of +1 between IndexedWord.index() and TokensAnnotation's index */
+                /* IMPORTANT: IndexedWord.index() and TokensAnnotation's index starts from 1 */
                 CoreLabel currentToken = tokens.get(currentParent.index() - 1);
                 if (currentToken.get(CoreAnnotations.PartOfSpeechAnnotation.class).equals("VM")) {
                     modalFound = true;
@@ -96,29 +98,62 @@ public class DateInfo {
                 }
             }
         }
+        if (!caseFound) {
+            int firstIndex = ner.get(0).index();
+            /* IMPORTANT: IndexedWord.index() and TokensAnnotation's index starts from 1 */
+            if (firstIndex > 1 && firstIndex < dependencies.size() &&
+                    CASES.contains(dependencies.getNodeByIndexSafe(firstIndex - 1).originalText())) {
+                caseFound = true;
+                caseType = dependencies.getNodeByIndexSafe(firstIndex - 1).originalText();
+            }
+        }
         if (!caseFound) caseType = "";
 
+        String dateString = ner.stream().map(IndexedWord::originalText).collect(Collectors.joining(" ")).toLowerCase();
         weekDay = "";
-        if (ner.stream().map(IndexedWord::originalText).collect(Collectors.joining(" ")).toLowerCase().contains("luned"))
+        if (dateString.contains("luned"))
             weekDay = "lunedì";
-        else if (ner.stream().map(IndexedWord::originalText).collect(Collectors.joining(" ")).toLowerCase().contains("marted"))
+        else if (dateString.contains("marted"))
             weekDay = "martedì";
-        else if (ner.stream().map(IndexedWord::originalText).collect(Collectors.joining(" ")).toLowerCase().contains("mercoled"))
+        else if (dateString.contains("mercoled"))
             weekDay = "mercoledì";
-        else if (ner.stream().map(IndexedWord::originalText).collect(Collectors.joining(" ")).toLowerCase().contains("gioved"))
+        else if (dateString.contains("gioved"))
             weekDay = "giovedì";
-        else if (ner.stream().map(IndexedWord::originalText).collect(Collectors.joining(" ")).toLowerCase().contains("venerd"))
+        else if (dateString.contains("venerd"))
             weekDay = "venerdì";
-        else if (ner.stream().map(IndexedWord::originalText).collect(Collectors.joining(" ")).toLowerCase().contains("sabato"))
+        else if (dateString.contains("sabato"))
             weekDay = "sabato";
-        else if (ner.stream().map(IndexedWord::originalText).collect(Collectors.joining(" ")).toLowerCase().contains("domenica"))
+        else if (dateString.contains("domenica"))
             weekDay = "domenica";
 
         isStart = false;
         isEnd = false;
     }
 
-    public static int getMonthDaysNumber(int monthNum) {
+    static String addOneDay(String date) {
+        String[] dateFields = date.split("-");
+        int[] dateIntFields = new int[3];
+        try {
+            for (int i = 0; i < dateFields.length; i++)
+                dateIntFields[i] = Integer.parseInt(dateFields[i]);
+        } catch (NumberFormatException ex) {
+        }
+        if (dateIntFields[0] > 0 && dateIntFields[1] > 0 && dateIntFields[2] > 0) {
+            dateIntFields[2]++;
+            int monthDaysNumber = getMonthDaysNumber(dateIntFields[1]);
+            if (dateIntFields[2] > monthDaysNumber) {
+                dateIntFields[2] = dateIntFields[2] % monthDaysNumber;
+                dateIntFields[1]++;
+                if (dateIntFields[1] > YEAR_MONTH_NUMBER) {
+                    dateIntFields[1] = dateIntFields[1] % YEAR_MONTH_NUMBER;
+                    dateIntFields[0]++;
+                }
+            }
+        }
+        return String.format("%04d-%02d-%02d", dateIntFields[0], dateIntFields[1], dateIntFields[2]);
+    }
+
+    static int getMonthDaysNumber(int monthNum) {
         switch (monthNum) {
             case 11:
             case 4:
@@ -187,11 +222,56 @@ public class DateInfo {
             dateIntFields[2]++;
             int monthDaysNumber = getMonthDaysNumber(dateIntFields[1]);
             if (dateIntFields[2] > monthDaysNumber) {
-                dateIntFields[2] = (dateIntFields[2] % monthDaysNumber) + 1;
+                dateIntFields[2] = dateIntFields[2] % monthDaysNumber;
                 dateIntFields[1]++;
                 if (dateIntFields[1] > YEAR_MONTH_NUMBER) {
-                    dateIntFields[1] = (dateIntFields[1] % YEAR_MONTH_NUMBER) + 1;
+                    dateIntFields[1] = dateIntFields[1] % YEAR_MONTH_NUMBER;
                     dateIntFields[0]++;
+                }
+            }
+        }
+        date = String.format("%04d-%02d-%02d", dateIntFields[0], dateIntFields[1], dateIntFields[2]);
+    }
+
+    public void addOneWeek() {
+        String[] dateFields = date.split("-");
+        int[] dateIntFields = new int[3];
+        try {
+            for (int i = 0; i < dateFields.length; i++)
+                dateIntFields[i] = Integer.parseInt(dateFields[i]);
+        } catch (NumberFormatException ex) {
+        }
+        if (dateIntFields[0] > 0 && dateIntFields[1] > 0 && dateIntFields[2] > 0) {
+            dateIntFields[2] += WEEK_DAY_NUMBER;
+            int monthDaysNumber = getMonthDaysNumber(dateIntFields[1]);
+            if (dateIntFields[2] > monthDaysNumber) {
+                dateIntFields[2] = dateIntFields[2] % monthDaysNumber;
+                dateIntFields[1]++;
+                if (dateIntFields[1] > YEAR_MONTH_NUMBER) {
+                    dateIntFields[1] = dateIntFields[1] % YEAR_MONTH_NUMBER;
+                    dateIntFields[0]++;
+                }
+            }
+        }
+        date = String.format("%04d-%02d-%02d", dateIntFields[0], dateIntFields[1], dateIntFields[2]);
+    }
+
+    void addDays(int n) {
+        String[] dateFields = date.split("-");
+        int[] dateIntFields = new int[3];
+        try {
+            for (int i = 0; i < dateFields.length; i++)
+                dateIntFields[i] = Integer.parseInt(dateFields[i]);
+        } catch (NumberFormatException ex) {
+        }
+        if (dateIntFields[0] > 0 && dateIntFields[1] > 0 && dateIntFields[2] > 0) {
+            dateIntFields[2] += n;
+            int monthDaysNumber = getMonthDaysNumber(dateIntFields[1]);
+            if (dateIntFields[2] > monthDaysNumber) {
+                dateIntFields[2] = dateIntFields[2] % monthDaysNumber;
+                dateIntFields[1]++;
+                if (dateIntFields[1] > YEAR_MONTH_NUMBER) {
+                    dateIntFields[1]++;
                 }
             }
         }

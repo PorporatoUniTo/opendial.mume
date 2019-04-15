@@ -37,14 +37,14 @@
         </rule>
 
         <!-- The user gave a location information that the system catched, but did not understand -->
-        <rule id="NoSlotFound">
+        <rule id="NoSlotFoundError">
             <case>
                 <condition>
                     <if var="current_step" value="INFORMATION_RETRIEVAL"/>
                     <if var="a_m" relation="in" value="[ASK_START_SLOT,ASK_START_CITY_CONFIRM]"/>
                     <if var="newInformation" relation="contains" value="UE"/>
 
-                    <if var="newInformation" relation="contains" value="Error(NoSlotFound)"/>
+                    <if var="newInformation" relation="contains" value="Error(NoSlotFoundError)"/>
                 </condition>
                 <effect>
                     <set var="u_m"
@@ -61,7 +61,7 @@
                     <if var="a_m" relation="in" value="[ASK_END_SLOT,ASK_END_SLOT_MORE,ASK_END_CITY_CONFIRM]"/>
                     <if var="newInformation" relation="contains" value="UE"/>
 
-                    <if var="newInformation" relation="contains" value="Error(NoSlotFound)"/>
+                    <if var="newInformation" relation="contains" value="Error(NoSlotFoundError)"/>
                 </condition>
                 <effect>
                     <set var="u_m"

@@ -4,7 +4,7 @@ import java.util.*;
 import java.util.logging.Logger;
 
 public class Shared {
-    private static final String START = "start";
+    public static final String START = "start";
     private static final String CAPITAL_START = "Start";
     private static final String END = "end";
     private static final String CAPITAL_END = "End";
@@ -42,7 +42,12 @@ public class Shared {
 
     public static final String NONE = "Missing";
 
-    public static final double DISTANCE_THRESHOLD = 0.075;
+    public static final String PAST_TIME_ERROR = "PastTimeError";
+    public static final String PAST_DATE_ERROR = "PastDateError";
+    public static final String NO_SLOT_FOUND = "NoSlotFoundError";
+
+
+    public static final double DISTANCE_THRESHOLD = 0.1;
 
     // Google Maps
     public static final String KEY = "key=";
@@ -68,7 +73,8 @@ public class Shared {
     public static final String MAPS_GEOCODING = "https://maps.googleapis.com/maps/api/geocode/json?";
     public static final String LAT_LNG = "latlng=";
     public static final String GEOCODING_RESULT_TYPES = "result_type=";
-    public static final String GEOCODING_LOCALITY = "administrative_area_level_3|locality";
+    // route = address; locality = city
+    public static final String GEOCODING_LOCALITY = "route|locality";
 
     /**
      * Google service URL to get the address' parts out of an address
@@ -82,10 +88,14 @@ public class Shared {
      */
     public static final String LATITUDE = "lat";
     public static final String LONGITUDE = "lng";
+    public static final String CANDIDATES = "candidates";
     public static final String COMPLETE_ADDRESS = "formatted_address";
     public static final String COMPONENTS = "address_components";
-    public static final String LONG_ADDRESS = "long_name";
+    public static final String LONG_NAME = "long_name";
     public static final String RESULTS = "results";
+    public static final String COMPONENT_TYPES = "types";
+    public static final String ROUTE = "route";
+    public static final String LOCALITY = "locality";
 
     /*
     // Nominatim
@@ -93,11 +103,13 @@ public class Shared {
     public static final int NOMINATIM_TIMEOUT = 1000;
     */
 
+    public static final Set<String> CASES = new HashSet<>(Arrays.asList("da", "fino", "per", "a", "di", "in", "del", "dal", "al", "dalle", "alle", "le"));
+
     public static final Set<String> STRONG_START_CITY_CASE = new HashSet<>(Arrays.asList("da"));   // "da Pinerolo"
     // DI -> "Mi serve una delle auto di Pinerolo" ==> "Voglio lasciare la macchina in via del Castello DI Nichelino"
-    public static final Set<String> STRONG_END_CITY_CASE = new HashSet<>(Arrays.asList("fino"));    // "fino a Nichelino"
+    public static final Set<String> STRONG_END_CITY_CASE = new HashSet<>(Arrays.asList("fino", "per"));    // "fino a Nichelino", "Voglio aprtire subiyo per Rivoli."
     // A -> "da Nichelino a Pinerolo" => "Voglio andare da piazza Vittorio Veneto A Pinerolo a Nichelino"
-    public static final Set<String> DEPENDANT_CITY_CASE = new HashSet<>(Arrays.asList("a", "di"));  // "voglio partire da piazza Avis a Pinerolo", "voglio partire da via Morante di Nichelino"
+    public static final Set<String> DEPENDANT_CITY_CASE = new HashSet<>(Arrays.asList("a", "di"));  // "voglio partire da BERNINI a Torino", "voglio partire da via Morante di Nichelino"
     public static final Set<String> WEAK_START_CITY_CASE = new HashSet<>(Arrays.asList("di"));  // "voglio una delle macchine di Nichelino"
     public static final Set<String> WEAK_END_CITY_CASE = new HashSet<>(Arrays.asList("a")); // "da Pinerolo a Nichelino"
 
@@ -110,7 +122,7 @@ public class Shared {
     // DI -> "Mi serve una delle auto di SANTA GIULIA" ==> "Voglio lasciare la macchina a MATTEOTTI DI Grugliasco"
     public static final Set<String> STRONG_END_SLOT_CASE = new HashSet<>(Arrays.asList("fino"));    // "fino a OSPEDALE MARIA VITTORIA"
     // A -> "da BERNINI a TOFANE" => "Voglio andare da MARCONI A Vinovo a Nichelino"
-    public static final Set<String> DEPENDANT_SLOT_CASE = new HashSet<>(Arrays.asList("a", "di"));  // "voglio partire da Torino a BERNINI", "voglio partire da MARCONI di VInovo"
+    public static final Set<String> DEPENDANT_SLOT_CASE = new HashSet<>(Arrays.asList("a", "di"));  // "voglio partire da Torino a BERNINI", "voglio partire da MARCONI di Vinovo"
     public static final Set<String> WEAK_START_SLOT_CASE = new HashSet<>(Arrays.asList("di", "del"));  // "voglio una delle macchine del parcheggio BERNINI"
     public static final Set<String> WEAK_END_SLOT_CASE = new HashSet<>(Arrays.asList("a")); // "da BERNINI a BOLOGNA"
 
@@ -129,12 +141,12 @@ public class Shared {
     public static final Set<String> ADDRESS_CLUE = new HashSet<>(Arrays.asList("corso", "piazza", "strada", "via", "viale", "vicolo"));
 
     // TODO check
-    public static final Set<String> START_VERBS = new HashSet<>(Arrays.asList("iniziare", "partire", "prendere", "prenotare", "usare", "serve", "volere",
+    public static final Set<String> START_VERBS = new HashSet<>(Arrays.asList("essere", "iniziare", "partire", "prendere", "prenotare", "serve", "usare", "volere",
             // FIXME
-            "prendare", "essere"));
-    public static final Set<String> END_VERBS = new HashSet<>(Arrays.asList("arrivare", "lasciare", "posare", "raggiungere", "giungere", "andare", "essere"));
+            "prendare"));
+    public static final Set<String> END_VERBS = new HashSet<>(Arrays.asList("andare", "arrivare", "giungere", "lasciare", "posare", "raggiungere"));
 
-    public static final LinkedList<String> PUNCT = new LinkedList<>(Arrays.asList("", ".", " ", ",", ":", ";", "?", "!"));
+    public static final LinkedList<String> PUNCT = new LinkedList<>(Arrays.asList(".", " ", ",", ":", ";", "?", "!"));
 
     /*
     /* Sample citis /
@@ -155,7 +167,7 @@ public class Shared {
 
     public static final Set<String> NOW_WORDS = new HashSet<>(Arrays.asList("adesso", "ora", "subito"));
 
-    public static final Set<String> HERE_WORDS = new HashSet<>(Arrays.asList("qui", "qua"));
+    public static final Set<String> HERE_WORDS = new HashSet<>(Arrays.asList("qui", "qua", "sono"));
 
     static {
         HERE_WORDS.addAll(NOW_WORDS);

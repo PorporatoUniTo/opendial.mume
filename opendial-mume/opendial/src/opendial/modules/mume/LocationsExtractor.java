@@ -35,12 +35,15 @@ class LocationsExtractor {
      * @param information            Map<String, String> that will contains the updated information
      * @param oldInformation         the Map<String, String> that contains the old information
      * @param machinePrevState       the previous state of the machine, needed if the user is answering a question from the system
+     * @return A List<LocationInfo> of the address found, to filter out from the dates in the original sentence and
+     * avoid misunderstandings between date and place name (such as 'XVIII dicembre')
      */
-    void extractLocations(Annotation annotatedUserUtterance,
-                          List<List<IndexedWord>> locationNERs,
-                          Map<String, String> information,
-                          Map<String, String> oldInformation,
-                          String machinePrevState) {
+    List<LocationInfo> extractLocations(Annotation annotatedUserUtterance,
+                                        List<List<IndexedWord>> locationNERs,
+                                        Map<String, String> information,
+                                        Map<String, String> oldInformation,
+                                        String machinePrevState) {
+        List<LocationInfo> addresses = new ArrayList<>();
         try {
             LocationInfo newStartCity = null;
             LocationInfo newEndCity = null;
@@ -53,11 +56,10 @@ class LocationsExtractor {
             SemanticGraph dependencies = annotatedUserUtterance.get(CoreAnnotations.SentencesAnnotation.class).get(0).get(SemanticGraphCoreAnnotations.EnhancedPlusPlusDependenciesAnnotation.class);
 
             List<LocationInfo> cities = new ArrayList<>();
-            List<LocationInfo> addresses = new ArrayList<>();
             List<LocationInfo> slots = new ArrayList<>();
-            boolean here = tokens.stream().anyMatch(t -> HERE_WORDS.contains(t.originalText()));
+            boolean hereClue = tokens.stream().anyMatch(t -> HERE_WORDS.contains(t.originalText()));
 
-            findLocationInfo(cities, addresses, slots, tokens, dependencies);
+            findLocationInfo(cities, addresses, slots, tokens, dependencies, locationNERs);
 
 
             //log.info("Locations:\t" + locationNERs.toString());
@@ -67,7 +69,7 @@ class LocationsExtractor {
             addresses.forEach(t -> log.info(t.toString()));
             log.info("Slots:");
             slots.forEach(t -> log.info(t.toString()));
-            log.info("Here:\t" + here);
+            log.info("Here:\t" + hereClue);
 
             boolean doneCase = false;
             boolean doneVerbs = false;
@@ -134,17 +136,7 @@ class LocationsExtractor {
                     /* SEARCH FOR AMBIGUOUS SPATIAL EXPRESSION (those which role dependes on other information in the sentence) */
                     /* CITIES */
                     for (LocationInfo city : cities) {
-                        /* "... da Pinerolo... a Nichelino..." */
-                        if (newEndCity == null && WEAK_END_CITY_CASE.contains(city.getCaseType()) &&
-                                newStartCity != null && STRONG_START_CITY_CASE.contains(newStartCity.getCaseType())) {
-                            newEndCity = city;
-                            city.isEnd = true;
-                        }
-                        /* "Voglio andare a Nichelino [domani]." */
-                        else if (newEndCity == null && WEAK_END_CITY_CASE.contains(city.getCaseType()) && cities.size() == 1) {
-                            newEndCity = city;
-                            city.isEnd = true;
-                        } else if (city.getCaseType() != null && DEPENDANT_CITY_CASE.contains(city.getCaseType())) {
+                        if (city.getCaseType() != null && DEPENDANT_CITY_CASE.contains(city.getCaseType())) {
                             /* "... da Pinerolo Olimpica a Pinerolo..." */
                             if (newStartCity == null &&
                                     (newStartAddress != null && newStartAddress.isGovernorOf(city)) ||
@@ -159,6 +151,17 @@ class LocationsExtractor {
                                 newEndCity = city;
                                 city.isEnd = true;
                             }
+                        }
+                        /* "... da Pinerolo... a Nichelino..." */
+                        else if (newEndCity == null && WEAK_END_CITY_CASE.contains(city.getCaseType()) &&
+                                newStartCity != null && STRONG_START_CITY_CASE.contains(newStartCity.getCaseType())) {
+                            newEndCity = city;
+                            city.isEnd = true;
+                        }
+                        /* "Voglio andare a Nichelino [domani]." */
+                        else if (newEndCity == null && WEAK_END_CITY_CASE.contains(city.getCaseType()) && cities.size() == 1) {
+                            newEndCity = city;
+                            city.isEnd = true;
                         }
                     }
 
@@ -302,16 +305,22 @@ class LocationsExtractor {
 
             /* Check if the user is answering to targetted questions */
             /* Not updating SemanticGraph indexes, but it doesn't matter */
-            if (slots.size() == 1 && newStartSlot == null && machinePrevState.endsWith("START_SLOT")) {
+            if (slots.size() == 1 && newStartSlot == null && machinePrevState.endsWith("START_SLOT") && !slots.get(0).isEnd) {
                 newStartSlot = slots.get(0);
                 slots.get(0).isStart = true;
-            } else if (addresses.size() == 1 && newStartAddress == null && machinePrevState.endsWith("START_SLOT")) {
+            } else if (addresses.size() == 1 && newStartAddress == null && machinePrevState.endsWith("START_SLOT") && !addresses.get(0).isEnd) {
                 newStartAddress = addresses.get(0);
                 addresses.get(0).isStart = true;
-            } else if (cities.size() == 1 && newStartCity == null && machinePrevState.endsWith("START_SLOT")) {
+            } else if (cities.size() == 1 && newStartCity == null && machinePrevState.endsWith("START_SLOT") && !cities.get(0).isEnd) {
                 newStartCity = cities.get(0);
                 cities.get(0).isStart = true;
             }
+
+
+            if (!machinePrevState.endsWith("TIME") && !machinePrevState.endsWith("DATE"))
+                for (CoreLabel token : tokens)
+                    if (HERE_WORDS.contains(token.originalText()))
+                        hereClue = true;
 
 
             log.info("Extracted Start City: " + newStartCity);
@@ -322,13 +331,16 @@ class LocationsExtractor {
             log.info("Extracted End Slot: " + newEndSlot);
 
             // Infer missing information
-            InferLocationInformation.inferMissingInfo(oldInformation, newStartCity, newStartAddress, newStartSlot, here, true, information);
-            InferLocationInformation.inferMissingInfo(oldInformation, newEndCity, newEndAddress, newEndSlot, here, false, information);
+            InferLocationInformation.inferMissingInfo(oldInformation, newStartCity, newStartAddress, newStartSlot, hereClue, true, information, machinePrevState);
+            InferLocationInformation.inferMissingInfo(oldInformation, newEndCity, newEndAddress, newEndSlot, hereClue, false, information, machinePrevState);
         } catch (NullPointerException exception) {
             exception.printStackTrace();
             log.severe("USER UTTERANCE:\t" + annotatedUserUtterance.toString());
             log.severe("LOCATIONS FOUND:\t" + locationNERs.toString());
         }
+
+
+        return addresses;
     }
 
     /*
@@ -387,13 +399,18 @@ class LocationsExtractor {
      * @param slots        the (to be filled) List<LocationInfo> of slots found in the user utterance
      * @param tokens       the List<CoreLabel> of the tokens in the user utterance
      * @param dependencies the SemanticGraph of the token's dependencies of the user utterance
+     * @param locationNERs the List<List<IndexedWord>> of the location recognised by Tint (if any)
      */
-    private void findLocationInfo(List<LocationInfo> cities, List<LocationInfo> addresses, List<LocationInfo> slots, List<CoreLabel> tokens, SemanticGraph dependencies) {
+    private void findLocationInfo(List<LocationInfo> cities, List<LocationInfo> addresses, List<LocationInfo> slots, List<CoreLabel> tokens, SemanticGraph dependencies, List<List<IndexedWord>> locationNERs) {
+        Map<String, Integer> slotNames = new HashMap<>();
+        for (Slot slot : Slot.values())
+            slotNames.put(slot.getName(), slot.getNumberOfWords());
+
         Set<Integer> indexToCheck = tokens.stream().map(CoreLabel::index).collect(Collectors.toSet());
 
         // ADDRESSES
         for (CoreLabel token : tokens) {
-            // if the token is a address cleu (e.g. 'piazza'),...
+            // if the token is a address clue (e.g. 'piazza'),...
             if (indexToCheck.contains(token.index())) {
                 if (ADDRESS_CLUE.contains(token.originalText().toLowerCase())) {
                     IndexedWord tokenIndexedWord = dependencies.getNodeByIndexSafe(token.index());
@@ -425,7 +442,7 @@ class LocationsExtractor {
                         if (currentToken != null)
                             log.info("Skipping: " + currentToken.originalText());
                         currentToken = tokensIterator.next();
-                        if (currentToken.index() >= currentIndex)
+                        if (currentToken != null && currentToken.index() >= currentIndex)
                             stop = true;
                     } while (tokensIterator.hasNext() && !stop);
                     // Add to the final address only the chain of token without interruption
@@ -444,7 +461,7 @@ class LocationsExtractor {
                     // Remove from the checklist the extracted token
                     indexToCheck.removeAll(address.stream().map(IndexedWord::index).collect(Collectors.toSet()));
 
-                    log.info("Address: " + address.stream().map(IndexedWord::originalText).collect(Collectors.joining(" ")));
+                    log.info("Address:\t" + address.stream().map(IndexedWord::originalText).collect(Collectors.joining(" ")));
                     addresses.add(new LocationInfo(address, tokens, dependencies));
 
                     List<IndexedWord> maybeCity = City.extractFromAddress(address);
@@ -452,8 +469,8 @@ class LocationsExtractor {
                         cities.add(new LocationInfo(maybeCity, tokens, dependencies));
                 } else {
                     for (City city : City.values())
-                        if (indexToCheck.contains(token.index()) && token.index() + city.getNumberOfWords() < tokens.size()) {
-                            /* IMPORTANT: IndexedWord's indeces and TokensAnnotation's indeces start from 1 */
+                        /* IMPORTANT: IndexedWord's indeces and TokensAnnotation's indeces start from 1 */
+                        if (token.index() + city.getNumberOfWords() <= tokens.size()) {
                             List<CoreLabel> cityTokens = tokens.subList(token.index() - 1, token.index() + city.getNumberOfWords() - 1);
                             List<IndexedWord> cityIndexed = cityTokens.stream().map(t -> dependencies.getNodeByIndex(t.index())).collect(Collectors.toList());
                             if (cityTokens.stream().map(CoreLabel::originalText).collect(Collectors.joining(" ")).equalsIgnoreCase(city.getName())) {
@@ -462,18 +479,25 @@ class LocationsExtractor {
                             }
                         }
 
-                    for (Slot slot : Slot.values())
-                        if (indexToCheck.contains(token.index()) && token.index() + slot.getNumberOfWords() < tokens.size()) {
+                    if (indexToCheck.contains(token.index())) {
+                        for (Map.Entry<String, Integer> slot : slotNames.entrySet())
                             /* IMPORTANT: IndexedWord's indeces and TokensAnnotation's indeces start from 1 */
-                            List<CoreLabel> slotTokens = tokens.subList(token.index() - 1, token.index() + slot.getNumberOfWords() - 1);
-                            List<IndexedWord> cityIndexed = slotTokens.stream().map(t -> dependencies.getNodeByIndex(t.index())).collect(Collectors.toList());
-                            if (slotTokens.stream().map(CoreLabel::originalText).collect(Collectors.joining(" ")).equalsIgnoreCase(slot.getName())) {
-                                slots.add(new LocationInfo(cityIndexed, tokens, dependencies));
-                                indexToCheck.removeAll(slotTokens.stream().map(CoreLabel::index).collect(Collectors.toSet()));
+                            if (token.index() + slot.getValue() <= tokens.size()) {
+                                List<CoreLabel> slotTokens = tokens.subList(token.index() - 1, token.index() + slot.getValue() - 1);
+                                List<IndexedWord> slotIndexed = slotTokens.stream().map(t -> dependencies.getNodeByIndex(t.index())).collect(Collectors.toList());
+                                if (slotTokens.stream().map(CoreLabel::originalText).collect(Collectors.joining(" ")).equalsIgnoreCase(slot.getKey())) {
+                                    slots.add(new LocationInfo(slotIndexed, tokens, dependencies));
+                                    indexToCheck.removeAll(slotTokens.stream().map(CoreLabel::index).collect(Collectors.toSet()));
+                                }
                             }
-                        }
+                    }
                 }
             }
+        }
+
+        for (List<IndexedWord> loc : locationNERs) {
+            if (indexToCheck.containsAll(loc.stream().map(IndexedWord::index).collect(Collectors.toSet())))
+                addresses.add(new LocationInfo(loc, tokens, dependencies));
         }
     }
 }

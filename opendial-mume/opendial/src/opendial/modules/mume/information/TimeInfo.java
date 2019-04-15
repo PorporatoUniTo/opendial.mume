@@ -10,14 +10,18 @@ import edu.stanford.nlp.util.Pair;
 import java.util.*;
 import java.util.stream.Collectors;
 
+import static opendial.modules.mume.config.Shared.CASES;
+import static opendial.modules.mume.information.DurationInfo.DURATIONS_SEPARATOR;
+
 public class TimeInfo {
-    private static final int QUARTER = 15;
-    private static final int HOUR = 60;
-    private static final int HOUR_DAY = 24;
+    public static final int QUARTER = 15;
+    static final int HOUR = 60;
+    static final int MINUTES = 60;
+    static final int HOUR_DAY = 24;
 
     private enum TemporalModifier {
         MORNING("mattina", "mattino"),
-        EVENING("pomeriggio", "sera", "notte");
+        EVENING("pomeriggio", "sera", "notte", "stasera");
 
         private Set<String> texts;
 
@@ -41,15 +45,12 @@ public class TimeInfo {
     public boolean isEnd;
     private TemporalModifier temporatMod;
 
-    private TimeInfo() {
-    }
-
     public TimeInfo(List<IndexedWord> ner, List<CoreLabel> tokens, SemanticGraph dependencies) {
-        /* IMPORTANT: there is a shift of +1 between IndexedWord.index() and TokensAnnotation's index */
+        /* IMPORTANT: IndexedWord.index() and TokensAnnotation's index starts from 1 */
         time = tokens.get(ner.get(0).index() - 1).get(CoreAnnotations.NormalizedNamedEntityTagAnnotation.class).split("T")[1];
 
         wordList = ner;
-        /* IMPORTANT: there is a shift of +1 between IndexedWord.index() and TokensAnnotation's index */
+        /* IMPORTANT: IndexedWord.index() and TokensAnnotation's index starts from 1 */
         // tokenList = ner.stream().map(w -> tokens.get(w.index() - 1)).collect(Collectors.toList());
 
         // beginCharIndex = ner.get(0).beginPosition();
@@ -62,9 +63,10 @@ public class TimeInfo {
         boolean verbFound = false;
         while (!verbFound && pathToRootIterator.hasNext()) {
             IndexedWord currentParent = pathToRootIterator.next();
-            /* IMPORTANT: there is a shift of +1 between IndexedWord.index() and TokensAnnotation's index */
+            /* IMPORTANT: IndexedWord.index() and TokensAnnotation's index starts from 1 */
             CoreLabel currentToken = tokens.get(currentParent.index() - 1);
-            if (currentToken.get(CoreAnnotations.PartOfSpeechAnnotation.class).equals("V")) {
+            if (currentToken.get(CoreAnnotations.PartOfSpeechAnnotation.class).equals("V") ||
+                    currentToken.get(CoreAnnotations.PartOfSpeechAnnotation.class).startsWith("V+")) {
                 verbFound = true;
                 firstVerbGovernorWord = currentParent;
                 // firstVerbGovernorToken = currentToken;
@@ -75,7 +77,7 @@ public class TimeInfo {
             boolean modalFound = false;
             while (!modalFound && secondPathToRootIterator.hasNext()) {
                 IndexedWord currentParent = secondPathToRootIterator.next();
-                /* IMPORTANT: there is a shift of +1 between IndexedWord.index() and TokensAnnotation's index */
+                /* IMPORTANT: IndexedWord.index() and TokensAnnotation's index starts from 1 */
                 CoreLabel currentToken = tokens.get(currentParent.index() - 1);
                 String currentTokenPOS = currentToken.get(CoreAnnotations.PartOfSpeechAnnotation.class);
                 if (currentTokenPOS.equals("VM") || currentTokenPOS.equals("VA")) {
@@ -100,6 +102,18 @@ public class TimeInfo {
                 }
             }
         }
+        if (!caseFound) {
+            int firstIndex = ner.get(0).index();
+            /* IMPORTANT: IndexedWord.index() and TokensAnnotation's index starts from 1 */
+
+            System.out.println("ALT Case:\t(" + (firstIndex - 1) + ")\t" + dependencies.getNodeByIndexSafe(firstIndex - 1).originalText());
+
+            if (firstIndex > 1 && firstIndex < dependencies.size() &&
+                    CASES.contains(dependencies.getNodeByIndexSafe(firstIndex - 1).originalText())) {
+                caseFound = true;
+                caseType = dependencies.getNodeByIndexSafe(firstIndex - 1).originalText();
+            }
+        }
         if (!caseFound) caseType = "";
 
         this.inLetters = true;
@@ -121,50 +135,31 @@ public class TimeInfo {
         }
     }
 
-    /* TODO
-    public static TimeInfo generateFromDuration(TimeInfo time, DurationInfo dur) {
-        TimeInfo toReturn = new TimeInfo();
-        String[] split = time.time.split(":");
-        int oldHour = Integer.parseInt(split[0]);
-        int duration = Integer.parseInt(dur.getDuration().substring(0, dur.getDuration().length() - 1));
-        /* This has to be done at the end of the main extraction method /
-        // boolean incrementDay = false;
-        int newHour = oldHour + duration;
-        toReturn.time = newHour + ":" + split[1];
-        toReturn.wordList = dur.getWordList();
-        toReturn.caseType = dur.getCaseType();
-        toReturn.governors = dur.getGovernors();
-        toReturn.firstVerbGovernorWord = dur.getFirstVerbGovernorLemma();
-        toReturn.isStart = false;
-        toReturn.isEnd = true;
-
-        return toReturn;
-    }
-    */
-
     public static String roundToPreviousQuarter(String time) {
         String[] timeFields = time.split(":");
         return String.format("%s:%02d", timeFields[0], ((Integer.parseInt(timeFields[1]) / QUARTER) * QUARTER));
     }
 
-    public static String roundToNextQuarter(String time, DateInfo date) {
-        String[] timeFields = time.split(":");
+    public static String roundToNextQuarter(String endTimeDate) {
+        String[] timeDate = endTimeDate.split(DURATIONS_SEPARATOR);
+        String[] timeFields = timeDate[1].split(":");
         int m = Integer.parseInt(timeFields[1]);
         int newMinutes = ((m / QUARTER) * QUARTER);
         if (m % QUARTER != 0)
             newMinutes += QUARTER;
         int newHour = Integer.parseInt(timeFields[0]);
+        String date = timeDate[0];
         if (newMinutes >= HOUR) {
             newMinutes = newMinutes % HOUR;
             // Increment hour
             newHour++;
-            if (date != null && newHour >= HOUR_DAY) {
+            if (newHour >= HOUR_DAY) {
                 newHour = newHour % HOUR_DAY;
                 // Increment day
-                date.addOneDay();
+                date = DateInfo.addOneDay(date);
             }
         }
-        return String.format("%02d:%02d", newHour, newMinutes);
+        return String.format("%02d:%02d" + DURATIONS_SEPARATOR + date, newHour, newMinutes);
     }
 
     public String getWords() {
@@ -228,6 +223,32 @@ public class TimeInfo {
                 newHour = newHour % HOUR_DAY;
                 // Increment day
                 date.addOneDay();
+            }
+        }
+        time = String.format("%02d:%02d", newHour, newMinutes);
+    }
+
+    private void addHours(int n, DateInfo date) {
+        String[] timeFields = time.split(":");
+        int newHour = Integer.parseInt(timeFields[0]) + n;
+        if (newHour >= HOUR_DAY) {
+            date.addDays(newHour / HOUR_DAY);
+            newHour = newHour % HOUR_DAY;
+        }
+        time = String.format("%02d:%s", newHour, timeFields[1]);
+    }
+
+    private void addMinutes(int n, DateInfo date) {
+        String[] timeFields = time.split(":");
+        int m = Integer.parseInt(timeFields[1]);
+        int newMinutes = m + n;
+        int newHour = Integer.parseInt(timeFields[0]);
+        if (newMinutes >= HOUR) {
+            newHour = newHour + (newMinutes / HOUR);
+            newMinutes = newMinutes % HOUR;
+            if (newHour >= HOUR_DAY) {
+                date.addDays(newHour / HOUR_DAY);
+                newHour = newHour % HOUR_DAY;
             }
         }
         time = String.format("%02d:%02d", newHour, newMinutes);
