@@ -468,29 +468,29 @@ class LocationsExtractor {
                     if (!maybeCity.isEmpty())
                         cities.add(new LocationInfo(maybeCity, tokens, dependencies));
                 } else {
-                    for (City city : City.values())
+                    // if (indexToCheck.contains(token.index()))   // Superfluous
+                    for (Map.Entry<String, Integer> slot : slotNames.entrySet())
                         /* IMPORTANT: IndexedWord's indeces and TokensAnnotation's indeces start from 1 */
-                        if (token.index() + city.getNumberOfWords() <= tokens.size()) {
-                            List<CoreLabel> cityTokens = tokens.subList(token.index() - 1, token.index() + city.getNumberOfWords() - 1);
-                            List<IndexedWord> cityIndexed = cityTokens.stream().map(t -> dependencies.getNodeByIndex(t.index())).collect(Collectors.toList());
-                            if (cityTokens.stream().map(CoreLabel::originalText).collect(Collectors.joining(" ")).equalsIgnoreCase(city.getName())) {
-                                cities.add(new LocationInfo(cityIndexed, tokens, dependencies));
-                                indexToCheck.removeAll(cityTokens.stream().map(CoreLabel::index).collect(Collectors.toSet()));
+                        if (token.index() + slot.getValue() <= tokens.size()) {
+                            List<CoreLabel> slotTokens = tokens.subList(token.index() - 1, token.index() + slot.getValue() - 1);
+                            List<IndexedWord> slotIndexed = slotTokens.stream().map(t -> dependencies.getNodeByIndex(t.index())).collect(Collectors.toList());
+                            if (slotTokens.stream().map(CoreLabel::originalText).collect(Collectors.joining(" ")).equalsIgnoreCase(slot.getKey())) {
+                                slots.add(new LocationInfo(slotIndexed, tokens, dependencies));
+                                indexToCheck.removeAll(slotTokens.stream().map(CoreLabel::index).collect(Collectors.toSet()));
                             }
                         }
 
-                    if (indexToCheck.contains(token.index())) {
-                        for (Map.Entry<String, Integer> slot : slotNames.entrySet())
+                    if (indexToCheck.contains(token.index()))
+                        for (City city : City.values())
                             /* IMPORTANT: IndexedWord's indeces and TokensAnnotation's indeces start from 1 */
-                            if (token.index() + slot.getValue() <= tokens.size()) {
-                                List<CoreLabel> slotTokens = tokens.subList(token.index() - 1, token.index() + slot.getValue() - 1);
-                                List<IndexedWord> slotIndexed = slotTokens.stream().map(t -> dependencies.getNodeByIndex(t.index())).collect(Collectors.toList());
-                                if (slotTokens.stream().map(CoreLabel::originalText).collect(Collectors.joining(" ")).equalsIgnoreCase(slot.getKey())) {
-                                    slots.add(new LocationInfo(slotIndexed, tokens, dependencies));
-                                    indexToCheck.removeAll(slotTokens.stream().map(CoreLabel::index).collect(Collectors.toSet()));
+                            if (token.index() + city.getNumberOfWords() <= tokens.size()) {
+                                List<CoreLabel> cityTokens = tokens.subList(token.index() - 1, token.index() + city.getNumberOfWords() - 1);
+                                List<IndexedWord> cityIndexed = cityTokens.stream().map(t -> dependencies.getNodeByIndex(t.index())).collect(Collectors.toList());
+                                if (cityTokens.stream().map(CoreLabel::originalText).collect(Collectors.joining(" ")).equalsIgnoreCase(city.getName())) {
+                                    cities.add(new LocationInfo(cityIndexed, tokens, dependencies));
+                                    indexToCheck.removeAll(cityTokens.stream().map(CoreLabel::index).collect(Collectors.toSet()));
                                 }
                             }
-                    }
                 }
             }
         }

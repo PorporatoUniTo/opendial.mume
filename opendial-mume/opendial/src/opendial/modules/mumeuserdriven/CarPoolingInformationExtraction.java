@@ -23,6 +23,8 @@ import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.time.ZonedDateTime;
 import java.util.*;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -197,9 +199,7 @@ public class CarPoolingInformationExtraction implements Module {
             log.info("endDate:\t" + state.queryProb("endDate").getBest().toString());
             log.info("endTime:\t" + state.queryProb("endTime").getBest().toString());
 
-            /*
             // Informations
-            Map<String, String> information = new HashMap<>();
             Map<String, String> previousInformation = new HashMap<>();
             String[] infoSlots = {
                     "startDate",
@@ -220,19 +220,17 @@ public class CarPoolingInformationExtraction implements Module {
 
             Arrays.stream(infoSlots).forEach(slot -> {
                 if (state.hasChanceNode(slot))
-                    information.put(slot, state.queryProb(slot).getBest().toString());
+                    previousInformation.put(slot, state.queryProb(slot).getBest().toString());
                 else
-                    information.put(slot, NONE);
-                previousInformation.put(slot, information.get(slot));
+                    previousInformation.put(slot, NONE);
             });
 
             previousInformation.forEach((s, v) -> log.info(s + " = " + v));
-            */
 
             // 'Vorrei prenotare l'auto in piazza Vittorio Veneto a Pinerolo per domani dalle 14 alle sette'
             log.info("User said: '" + userUtterance + "'");
 
-            userUtterance = correctUserUtterance(userUtterance, machineIntent);
+            userUtterance = correctUserUtterance(userUtterance, machineIntent, ZonedDateTime.now(), previousInformation.getOrDefault("startDate", NONE));
             log.info("Corrected user utterance: '" + userUtterance + "'");
 
             Annotation annotation;
@@ -241,7 +239,7 @@ public class CarPoolingInformationExtraction implements Module {
             // annotation = pipeline.run(stream, System.out, TintRunner.OutputFormat.JSON);
             annotation = pipeline.runRaw(userUtterance);
 
-            // TESTS
+            /* TESTS
             log.info("Results:");
             log.info("Text: " + annotation.get(CoreAnnotations.TextAnnotation.class));
             log.info("Token's POS-tags:");
@@ -291,12 +289,12 @@ public class CarPoolingInformationExtraction implements Module {
             durTokens.forEach(t -> log.info(t.get(CoreAnnotations.NormalizedNamedEntityTagAnnotation.class)));
             log.info("Locations:");
             locTokens.forEach(t -> log.info(t.get(CoreAnnotations.TextAnnotation.class)));
+            */
 
-            /* No test
+            // No test
             List<CoreLabel> tokens = annotation.get(CoreAnnotations.TokensAnnotation.class);
             List<CoreMap> sentences = annotation.get(CoreAnnotations.SentencesAnnotation.class);
             SemanticGraph dependencies = sentences.get(0).get(SemanticGraphCoreAnnotations.EnhancedPlusPlusDependenciesAnnotation.class);
-            */
 
             List<List<IndexedWord>> locationAnnotations = new ArrayList<>();
             List<List<IndexedWord>> dateAnnotations = new ArrayList<>();
@@ -991,6 +989,24 @@ public class CarPoolingInformationExtraction implements Module {
             }
         }
 
+        // SLOTS
+        for (Slot slot : Slot.values())
+            for (int i = 0; i < tokens.size() - slot.getNumberOfWords(); i++) {
+                if (indexToCheck.contains(tokens.get(i).index())) {
+                    List<CoreLabel> slotTokens = tokens.subList(i, i + slot.getNumberOfWords());
+                    if (slotTokens.stream().map(CoreLabel::originalText).collect(Collectors.joining(" ")).equalsIgnoreCase(slot.getName())) {
+                        slots.add(slot);
+                        indexToCheck.removeAll(slotTokens.stream().map(CoreLabel::index).collect(Collectors.toSet()));
+                    }
+                }
+            }
+        for (List<IndexedWord> newAddress : addresses) {
+            Set<Slot> newSlots = partialMatchWithSlotAddress(newAddress);
+            for (Slot newSlot : newSlots)
+                if (!slots.contains(newSlot))
+                    slots.add(newSlot);
+        }
+
         // CITIES
         for (City city : City.values())
             for (int i = 0; i < tokens.size() - city.getNumberOfWords(); i++) {
@@ -1010,24 +1026,6 @@ public class CarPoolingInformationExtraction implements Module {
             }
         }
 
-        // SLOTS
-        for (Slot slot : Slot.values())
-            for (int i = 0; i < tokens.size() - slot.getNumberOfWords(); i++) {
-                if (indexToCheck.contains(tokens.get(i).index())) {
-                    List<CoreLabel> slotTokens = tokens.subList(i, i + slot.getNumberOfWords());
-                    if (slotTokens.stream().map(CoreLabel::originalText).collect(Collectors.joining(" ")).equalsIgnoreCase(slot.getName())) {
-                        slots.add(slot);
-                        indexToCheck.removeAll(slotTokens.stream().map(CoreLabel::index).collect(Collectors.toSet()));
-                    }
-                }
-            }
-        for (List<IndexedWord> newAddress : addresses) {
-            Set<Slot> newSlots = partialMatchWithSlotAddress(newAddress);
-            for (Slot newSlot : newSlots)
-                if (!slots.contains(newSlot))
-                    slots.add(newSlot);
-        }
-
         for (List<IndexedWord> loc : locationAnnotations) {
             if (indexToCheck.containsAll(loc.stream().map(IndexedWord::index).collect(Collectors.toSet())))
                 addresses.add(loc);
@@ -1041,57 +1039,49 @@ public class CarPoolingInformationExtraction implements Module {
      * @return the Italian (lowercase) String name of the month
      */
     private String getMonthName(int monthNumber) {
-        String name = "";
         switch (monthNumber) {
             case 1:
-                name = "gennaio";
-                break;
+                return "gennaio";
             case 2:
-                name = "febbraio";
-                break;
+                return "febbraio";
             case 3:
-                name = "marzo";
-                break;
+                return "marzo";
             case 4:
-                name = "aprile";
-                break;
+                return "aprile";
             case 5:
-                name = "maggio";
-                break;
+                return "maggio";
             case 6:
-                name = "giugno";
-                break;
+                return "giugno";
             case 7:
-                name = "luglio";
-                break;
+                return "luglio";
             case 8:
-                name = "agosto";
-                break;
+                return "agosto";
             case 9:
-                name = "settembre";
-                break;
+                return "settembre";
             case 10:
-                name = "ottobre";
-                break;
+                return "ottobre";
             case 11:
-                name = "novembre";
-                break;
+                return "novembre";
             case 12:
-                name = "dicembre";
-                break;
+                return "dicembre";
+            default:
+                return "";
         }
-        return name;
     }
 
     /**
      * Correct the user utterance for enable the recognition of the Named Entities in it.
      *
      * @param originalUtterance the original utterance from the user
-     * @param machineIntent     the previous machine state(that may contains the question the user is answering at)
+     * @param machinePrevState  the previous machine state(that may contains the question the user is answering at)
+     * @param now               the current complete date
+     * @param startDate         the String with the modified user utterance ready for parsing
      */
-    private String correctUserUtterance(String originalUtterance, String machineIntent) {
+    private String correctUserUtterance(String originalUtterance, String machinePrevState, ZonedDateTime now, String startDate) {
         String correctedUtterance = originalUtterance;
         // NO correctedUtterance = correctedUtterance.toLowerCase();
+
+        correctedUtterance = correctedUtterance.replaceAll("\\s+", " ");
 
         /*
          * In one cases the hour starts with a vovel, "all'una":
@@ -1100,43 +1090,114 @@ public class CarPoolingInformationExtraction implements Module {
         correctedUtterance = correctedUtterance.replace("l'una", "le una");
 
         /*
+         * The user maybe has omitted the month from a date. If it is so, it should be that the user would imply the
+         *  CURRENT MONTH or the month that s/he has ALREADY COMMUNICATED (or was inferred by the system).
+         */
+        if (machinePrevState.endsWith("DATE")) {
+            /*
+             * If the answer is just a number or something in the form "[...] il _NUM_(.?)" (where _NUM_ is a number), the system
+             *  has to infer the month (and possibly the year)
+             /
+            if (correctedUtterance.matches("(Il|il|Dal|dal|Al|al|) (\\d{1,2})")) {
+                boolean addPunctuation = false;
+                if (correctedUtterance.endsWith(".") || correctedUtterance.endsWith(";")) {
+                    correctedUtterance = correctedUtterance.substring(0, correctedUtterance.length() - 1);
+                    addPunctuation = true;
+                }
+                correctedUtterance = correctedUtterance + " " +
+                        // if the user has communicated a "start month"...
+                        ((startDate != null && !startDate.equals(NONE)) ?
+                                // ... then s/he probably imply the same month...
+                                getMonthName(Integer.parseInt(startDate.split("-")[1])) :
+                                // ... otherwise, the current month
+                                getMonthName(now.getMonthValue())) +
+                        ((addPunctuation) ? "." : "");
+            }
+             */
+            Pattern monthDayPattern = Pattern.compile(
+                    "([Ii]l|[Dd]al|[Aa]l) (\\d{1,2})(?! \\d? ([Gg]ennaio|[Ff]ebbraio|[Mm]arzo|[Aa]prile|[Mm]aggio|[Gg]iugno|[Ll]uglio|[Aa]gosto|[Ss]ettembre|[Oo]ttobre|[Nn]ovembre|[Dd]icembre))"
+            );
+            Matcher monthDayMatcher = monthDayPattern.matcher(correctedUtterance);
+            String monthName = "";
+            log.info("Month Name:\t" + monthName);
+            for (String month : new String[]{"gennaio", "febbraio", "marzo", "aprile", "maggio", "giugno", "luglio", "agosto", "settembre", "ottobre", "novembre", "dicembre"})
+                if (correctedUtterance.contains(month))
+                    monthName = month;
+            log.info("Month Name:\t" + monthName);
+            if (monthName.isEmpty())
+                monthName = ((startDate != null && !startDate.equals(NONE)) ?
+                        // ... then s/he probably imply the same month...
+                        getMonthName(Integer.parseInt(startDate.split("-")[1])) :
+                        // ... otherwise, the current month
+                        getMonthName(now.getMonthValue()));
+            while (monthDayMatcher.find()) {
+                log.info("Matcher Match");
+                log.info("Month Name:\t" + monthName);
+                correctedUtterance = monthDayMatcher.replaceAll("$1 $2 " + monthName);
+            }
+        }
+        /*
          * If the user is answering a question by the system, s\he could have possibly omitted a preposition
          * (e.g.: "A che ora vuoi posare l'auto? [alle ]14"): if this is the case, add the preposition.
          */
-        if (machineIntent.contains("TIME")) {
-            int timeMaybe = -1;
-            try {
-                timeMaybe = Integer.parseInt(correctedUtterance.trim());
-            } catch (NumberFormatException exception) {
-            }
-            if (timeMaybe > -1)
-                correctedUtterance = "Alle " + correctedUtterance;
+        else if (machinePrevState.endsWith("TIME")) {
+            /*
+             * If the system asked for a time information, the answer shuold contain a preposition such as "alle"
+             *   (e.g., "A che ora vorresti partire? Alle sette")
+             */
+            if (!(correctedUtterance.startsWith("Alle") || correctedUtterance.startsWith("alle") ||
+                    correctedUtterance.startsWith("Dalle") || correctedUtterance.startsWith("dalle") ||
+                    correctedUtterance.startsWith("Le") || correctedUtterance.startsWith("le")) &&   // The others are explicitated for clarity, this is more general
+                    correctedUtterance.matches("\\d{1,2}(:\\d\\d)?"))
+                correctedUtterance = "Alle " + correctedUtterance.trim();
             else if (correctedUtterance.startsWith("le"))
                 correctedUtterance = "Al" + correctedUtterance;
             else if (correctedUtterance.startsWith("Le"))
                 correctedUtterance = "Alle " + correctedUtterance.substring(3);
-        } else if (machineIntent.endsWith("START_CITY") || machineIntent.endsWith("START_SLOT")) {
+        } else if (machinePrevState.endsWith("START_CITY") || machinePrevState.endsWith("START_SLOT")) {
             /*
              * If the user is answering to a question like "Da dove vuoi partire", the utternace should contain the
              *  preposition "da" (e.g.: Da dove vuoi partire? Da Pinerolo)
              */
-            if (!correctedUtterance.toLowerCase().startsWith("da "))
-                correctedUtterance = "Da " + correctedUtterance;
-        } else if (machineIntent.endsWith("END_CITY") || machineIntent.endsWith("END_SLOT")) {
+            if (!correctedUtterance.startsWith("da ") && !correctedUtterance.startsWith("dall'"))
+                correctedUtterance = "da " + correctedUtterance;
+        } /* THE END CITY IS NOT AN ESSENTIAL INFORMATION: if the user doesn't communicate it, the system doesn't ask.
+            else if (machinePrevState.endsWith("END_CITY") || machinePrevState.endsWith("END_SLOT")) {
             /*
              * Similarly if the user is communication the city/spot in which s/he will leave the vehicle, the utterance
              *  should contain the preposition "a" (e.g.: "E dove voui posare l'auto? a Nichelino")
-             */
-            if (!correctedUtterance.toLowerCase().startsWith("a"))
-                correctedUtterance = "A " + correctedUtterance;
+             /
+            if (!correctedUtterance.contains("a"))
+                correctedUtterance = "a " + correctedUtterance;
         }
+        */
+
+        /* Tint has some problem with accented letters in the weekdays names: replace with the non-accented letter (it works fine) */
+        correctedUtterance = correctedUtterance.replaceAll("luned.", "lunedi");
+        correctedUtterance = correctedUtterance.replaceAll("marted.", "martedi");
+        correctedUtterance = correctedUtterance.replaceAll("mercoled.", "mercoledi");
+        correctedUtterance = correctedUtterance.replaceAll("gioved.", "giovedi");
+        correctedUtterance = correctedUtterance.replaceAll("venerd.", "venerdi");
+
+        /* The systma can handler just one sentence at one time */
+        String subCorrectedUtterance = correctedUtterance.substring(0, correctedUtterance.length() - 1);
+        correctedUtterance = subCorrectedUtterance.replace(".", " e ").replace(";", " e ") + correctedUtterance.charAt(correctedUtterance.length() - 1);
+
+        /* Tint has some problem with the hou format \d\d:\d\d */
+        correctedUtterance = correctedUtterance.replaceAll("(\\d{1,2}):(\\d\\d)", "$1 e $2");
 
         /*
          * IMPORTANT: if the user utterance ends with a named entity (for example 'Voglio partire da piazza Castello')
          * the extraction process won't get this last one; a full stop (NER type "O", null) is therefore required and
          * has to be added if missing.
          */
-        if (!originalUtterance.endsWith("."))
+        boolean endWithPunct = false;
+        for (int i = 0; i < PUNCT.size() && !endWithPunct; i++) {
+            String punct = PUNCT.get(i);
+            if (!punct.isEmpty() && originalUtterance.endsWith(PUNCT.get(i)))
+                endWithPunct = true;
+        }
+        if (!endWithPunct)
             correctedUtterance = correctedUtterance + ".";
         return correctedUtterance;
     }

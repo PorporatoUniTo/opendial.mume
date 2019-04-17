@@ -123,7 +123,8 @@ public class Shared {
 
     public static final Set<String> ADDRESS_CLUE = new HashSet<>(Arrays.asList("corso", "piazza", "strada", "via", "viale", "vicolo"));
 
-    private static final Set<String> PUNCT = new HashSet<>(Arrays.asList("", ".", " ", ",", ":", ";", "?", "!"));
+
+    public static final LinkedList<String> PUNCT = new LinkedList<>(Arrays.asList("", ".", " ", ",", ":", ";", "?", "!"));
     private static final Set<String> POSITIVE_WORDS = new HashSet<>(Arrays.asList("sì", "si", "certo", "certissimo", "ok", "giusto", "giustissimo", "vero", "verissimo", "corretto"));
     public static Set<String> positiveAnswers = new HashSet<>();
 

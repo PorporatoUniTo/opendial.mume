@@ -140,7 +140,6 @@ public class Shared {
 
     public static final Set<String> ADDRESS_CLUE = new HashSet<>(Arrays.asList("corso", "piazza", "strada", "via", "viale", "vicolo"));
 
-    // TODO check
     public static final Set<String> START_VERBS = new HashSet<>(Arrays.asList("essere", "iniziare", "partire", "prendere", "prenotare", "serve", "usare", "volere",
             // FIXME
             "prendare"));

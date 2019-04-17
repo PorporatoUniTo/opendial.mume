@@ -364,7 +364,7 @@ class DatesTimesExtractor {
                 information.put(START_DATE, date);
             }
             // Otherwise, the user may beeing answering a direct question
-            else if (nowClue && (machinePrevState.endsWith("TIME") || machinePrevState.endsWith("DATE")) && information.get(START_DATE).equals(NONE))
+            else if (nowClue && !machinePrevState.endsWith("SLOT") && information.get(START_DATE).equals(NONE))
                 information.put(START_DATE, String.format("%04d-%02d-%02d", now.getYear(), now.getMonthValue(), now.getDayOfMonth()));
 
             if (newEndDate != null) {
@@ -452,10 +452,10 @@ class DatesTimesExtractor {
                 information.put(START_TIME, String.format("%s:%s", newTimeFields[0], newTimeFields[1]).replace(":", "-"));
             }
             // Otherwise, the user may beeing answering a direct question
-            else if ((newStartDate != null && newStartDate.isNow || nowClue && (machinePrevState.endsWith("TIME") || machinePrevState.endsWith("DATE"))) && information.get(START_TIME).equals(NONE))
+            else if ((newStartDate != null && newStartDate.isNow || nowClue && !machinePrevState.endsWith("TIME")) && information.get(START_TIME).equals(NONE))
                 information.put(START_TIME, TimeInfo.roundToPreviousQuarter(String.format("%02d:%02d", now.getHour(), now.getMinute())).replace(":", "-"));
                 // The user is giving the strat date as a time laps: "voglio partire tra due ore"
-            else if (newDuration != null && (machinePrevState.endsWith("TIME") || machinePrevState.endsWith("DATE")) &&
+            else if (newDuration != null && !machinePrevState.endsWith("SLOT") &&
                     // The duration is valid, and not e.g. "sera"
                     (newDuration.getYears() != 0 ||
                             newDuration.getMonths() != 0 ||
@@ -517,7 +517,8 @@ class DatesTimesExtractor {
                                         12 : 0));
                 // OpenDial has some problem with ':', so replace it with '-' in time information
                 information.put(END_TIME, String.format("%s:%s", newTimeFields[0], newTimeFields[1]).replace(":", "-"));
-            } else if (newDuration != null && !(machinePrevState.endsWith("TIME") || machinePrevState.endsWith("DATE")) &&
+            } else if (newDuration != null &&
+                    !(machinePrevState.endsWith("TIME") || machinePrevState.endsWith("DATE")) &&  // TODO check
                     (newDuration.getYears() != 0 ||
                             newDuration.getMonths() != 0 ||
                             newDuration.getDays() != 0 ||
