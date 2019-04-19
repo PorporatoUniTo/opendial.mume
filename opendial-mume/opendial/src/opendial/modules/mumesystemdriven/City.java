@@ -1,4 +1,4 @@
-package opendial.modules.mumeuserdriven;
+package opendial.modules.mumesystemdriven;
 
 import edu.stanford.nlp.ling.IndexedWord;
 
@@ -30,7 +30,7 @@ public enum City {
     }
 
     public static City getByName(String name) {
-        switch (name) {
+        switch (name.toLowerCase()) {
             case "torino":
                 return TORINO;
             case "caselle":
@@ -69,6 +69,7 @@ public enum City {
         return null;
     }
 
+    /*
     public static City extractFromAddress(String address) {
         for (City city : City.values()) {
             String lowerCaseAddress = address.toLowerCase();
@@ -78,6 +79,7 @@ public enum City {
         }
         return null;
     }
+     */
 
     public String getName() {
         return name;

@@ -1,4 +1,4 @@
-package opendial.modules.mumeuserdriven;
+package opendial.modules.mumesystemdriven;
 
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
@@ -13,9 +13,9 @@ import java.nio.charset.StandardCharsets;
 import java.util.Properties;
 import java.util.StringJoiner;
 
-import static opendial.modules.mumeuserdriven.Shared.*;
+import static opendial.modules.mumesystemdriven.Shared.*;
 
-public class CompleteSlotAddress {
+public class CompleteSlotAddresses {
     static private Properties localGoogleMapsAPIPropeties;
     static private final boolean TEST = true;
 

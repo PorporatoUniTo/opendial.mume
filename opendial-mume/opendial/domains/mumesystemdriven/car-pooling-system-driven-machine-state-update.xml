@@ -131,45 +131,22 @@
                     <if var="newInformation" relation="contains" value="UU"/>
 
                     <if var="newInformation" relation="contains" value="Slot({X})"/>
+                    <!-- Has to be set in Java
+                    <if var="newInformation" relation="contains" value="SortedSlotList({S})"/> -->
                     <if var="newInformation" relation="contains" value="Address({Y})"/>
                     <if var="newInformation" relation="contains" value="City({Z})"/>
                     <if var="newInformation" relation="contains" value="Lat({LAT})"/>
                     <if var="newInformation" relation="contains" value="Lon({LON})"/>
-                    <if var="newInformation" relation="!contains" value="startSlotUnspecified"/>
+                    <if var="newInformation" relation="contains" value="StartSlotUnspecified({F})"/>
                 </condition>
                 <effect>
                     <set var="startSlot" value="{X}"/>
+                    <!-- <set var="sortedSlots" value="{S}"/> -->
                     <set var="startAddress" value="{Y}"/>
                     <set var="startCity" value="{Z}"/>
                     <set var="startLat" value="{LAT}"/>
                     <set var="startLon" value="{LON}"/>
-                    <!-- <set var="startSlotUnspecified" value="false"/> -->
-
-                    <set var="newInformation" value="[]"/>
-                    <set var="a_m" value="ASK_END_SLOT"/>
-                </effect>
-            </case>
-            <case>
-                <!--The user communicate both the start slot and the start city -->
-                <condition>
-                    <if var="current_step" value="INFORMATION_RETRIEVAL"/>
-                    <if var="a_m" value="ASK_START_SLOT"/>
-                    <if var="newInformation" relation="contains" value="UU"/>
-
-                    <if var="newInformation" relation="contains" value="Slot({X})"/>
-                    <if var="newInformation" relation="contains" value="Address({Y})"/>
-                    <if var="newInformation" relation="contains" value="City({Z})"/>
-                    <if var="newInformation" relation="contains" value="Lat({LAT})"/>
-                    <if var="newInformation" relation="contains" value="Lon({LON})"/>
-                    <if var="newInformation" relation="contains" value="startSlotUnspecified"/>
-                </condition>
-                <effect>
-                    <set var="startSlot" value="{X}"/>
-                    <set var="startAddress" value="{Y}"/>
-                    <set var="startCity" value="{Z}"/>
-                    <set var="startLat" value="{LAT}"/>
-                    <set var="startLon" value="{LON}"/>
-                    <set var="startSlotUnspecified" value="true"/>
+                    <set var="startSlotUnspecified" value="{F}"/>
 
                     <set var="newInformation" value="[]"/>
                     <set var="a_m" value="ASK_END_SLOT"/>
@@ -184,20 +161,22 @@
 
                     <!--The code has to check if the comunicated city corresponds to the inferred city -->
                     <if var="newInformation" relation="contains" value="Slot({X})"/>
+                    <!-- Has to be set in Java
+                    <if var="newInformation" relation="contains" value="SortedSlotList({S})"/> -->
                     <if var="newInformation" relation="contains" value="Address({Y})"/>
                     <if var="newInformation" relation="contains" value="InferredCity({Z})"/>
                     <if var="newInformation" relation="contains" value="Lat({LAT})"/>
                     <if var="newInformation" relation="contains" value="Lon({LON})"/>
-                    <!-- The startSlot in this case has been given by the user
-                    <if var="newInformation" relation="!contains" value="startSlotUnspecified"/> -->
+                    <if var="newInformation" relation="contains" value="StartSlotUnspecified({F})"/>
                 </condition>
                 <effect>
                     <set var="startSlot" value="{X}"/>
+                    <!-- <set var="sortedSlots" value="{S}"/> -->
                     <set var="startAddress" value="{Y}"/>
                     <set var="startCity" value="{Z}"/>
                     <set var="startLat" value="{LAT}"/>
                     <set var="startLon" value="{LON}"/>
-                    <!-- <set var="startSlotUnspecified" value="false"/> -->
+                    <set var="startSlotUnspecified" value="{F}"/>
 
                     <set var="newInformation" value="[]"/>
                     <set var="a_m" value="ASK_START_CITY_CONFIRM"/>
@@ -210,7 +189,7 @@
                     <if var="a_m" value="ASK_START_SLOT"/>
                     <if var="newInformation" relation="contains" value="UU"/>
 
-                    <if var="newInformation" relation="!contains" value="Address(*)"/>
+                    <if var="newInformation" relation="!contains" value="Slot(*)"/>
                 </condition>
                 <effect>
                     <set var="newInformation" value="[]"/>
@@ -244,9 +223,12 @@
                 </condition>
                 <effect>
                     <set var="startSlot" value="Missing"/>
+                    <set var="sortedSlots" value="[]"/>
+                    <set var="startAddress" value="Missing"/>
                     <set var="startCity" value="Missing"/>
                     <set var="startLat" value="Missing"/>
                     <set var="startLon" value="Missing"/>
+                    <set var="startSlotUnspecified" value="true"/>
 
                     <set var="newInformation" value="[]"/>
                     <set var="a_m" value="ASK_START_SLOT"/>
@@ -278,13 +260,6 @@
 
                     <!-- Question: "Vuoi tornare da dove sei partito?" -->
                     <if var="newInformation" relation="contains" value="Answer(true)"/>
-                    <or>
-                        <if var="newInformation" relation="!contains" value="Address(*)"/>
-                        <and>
-                            <if var="newInformation" relation="contains" value="Address({S})"/>
-                            <if var="startSlot" value="{S}"/>
-                        </and>
-                    </or>
                 </condition>
                 <effect>
                     <set var="endSlot" value="{startSlot}"/>
@@ -302,9 +277,13 @@
                 <!--Journey type: A->B -->
                 <condition>
                     <if var="current_step" value="INFORMATION_RETRIEVAL"/>
-                    <if var="a_m" relation="in" value="[ASK_END_SLOT,ASK_END_SLOT_MORE]"/>
+                    <if var="a_m" relation="in" value="ASK_END_SLOT"/>
                     <if var="newInformation" relation="contains" value="UU"/>
 
+                    <or>
+                        <if var="newInformation" relation="contains" value="Answer(false)"/>
+                        <if var="newInformation" relation="!contains" value="Answer(*)"/>
+                    </or>
                     <if var="newInformation" relation="contains" value="Slot({X})"/>
                     <if var="newInformation" relation="contains" value="Address({Y})"/>
                     <if var="newInformation" relation="contains" value="City({Z})"/>
@@ -312,9 +291,9 @@
                     <if var="newInformation" relation="contains" value="Lon({LON})"/>
                 </condition>
                 <effect>
-                    <set var="endSlot" value="{startSlot}"/>
-                    <set var="endAddress" value="{startAddress}"/>
-                    <set var="endCity" value="{startCity}"/>
+                    <set var="endSlot" value="{X}"/>
+                    <set var="endAddress" value="{Y}"/>
+                    <set var="endCity" value="{Z}"/>
                     <set var="endLat" value="{LAT}"/>
                     <set var="endLon" value="{LON}"/>
 
@@ -327,7 +306,60 @@
                 <!--Journey type: A->B -->
                 <condition>
                     <if var="current_step" value="INFORMATION_RETRIEVAL"/>
-                    <if var="a_m" relation="in" value="[ASK_END_SLOT,ASK_END_SLOT_MORE]"/>
+                    <if var="a_m" relation="in" value="ASK_END_SLOT"/>
+                    <if var="newInformation" relation="contains" value="UU"/>
+
+                    <or>
+                        <if var="newInformation" relation="contains" value="Answer(false)"/>
+                        <if var="newInformation" relation="!contains" value="Answer(*)"/>
+                    </or>
+                    <if var="newInformation" relation="contains" value="Slot({X})"/>
+                    <if var="newInformation" relation="contains" value="Address({Y})"/>
+                    <if var="newInformation" relation="contains" value="InferredCity({Z})"/>
+                    <if var="newInformation" relation="contains" value="Lat({LAT})"/>
+                    <if var="newInformation" relation="contains" value="Lon({LON})"/>
+                </condition>
+                <effect>
+                    <set var="endSlot" value="{X}"/>
+                    <set var="endAddress" value="{Y}"/>
+                    <set var="endCity" value="{Z}"/>
+                    <set var="endLat" value="{LAT}"/>
+                    <set var="endLon" value="{LON}"/>
+
+                    <!-- Go on -->
+                    <set var="newInformation" value="[]"/>
+                    <set var="a_m" value="ASK_END_CITY_CONFIRM"/>
+                </effect>
+            </case>
+            <case>
+                <condition>
+                    <if var="current_step" value="INFORMATION_RETRIEVAL"/>
+                    <if var="a_m" relation="in" value="ASK_END_SLOT_MORE"/>
+                    <if var="newInformation" relation="contains" value="UU"/>
+
+                    <if var="newInformation" relation="contains" value="Slot({X})"/>
+                    <if var="newInformation" relation="contains" value="Address({Y})"/>
+                    <if var="newInformation" relation="contains" value="City({Z})"/>
+                    <if var="newInformation" relation="contains" value="Lat({LAT})"/>
+                    <if var="newInformation" relation="contains" value="Lon({LON})"/>
+                </condition>
+                <effect>
+                    <set var="endSlot" value="{X}"/>
+                    <set var="endAddress" value="{Y}"/>
+                    <set var="endCity" value="{Z}"/>
+                    <set var="endLat" value="{LAT}"/>
+                    <set var="endLon" value="{LON}"/>
+
+                    <!-- Go on -->
+                    <set var="newInformation" value="[]"/>
+                    <set var="a_m" value="ASK_VEHICLE_TYPE"/>
+                </effect>
+            </case>
+            <case>
+                <!--Journey type: A->B -->
+                <condition>
+                    <if var="current_step" value="INFORMATION_RETRIEVAL"/>
+                    <if var="a_m" value="ASK_END_SLOT_MORE"/>
                     <if var="newInformation" relation="contains" value="UU"/>
 
                     <if var="newInformation" relation="contains" value="Slot({X})"/>
@@ -337,9 +369,9 @@
                     <if var="newInformation" relation="contains" value="Lon({LON})"/>
                 </condition>
                 <effect>
-                    <set var="endSlot" value="{startSlot}"/>
-                    <set var="endAddress" value="{startAddress}"/>
-                    <set var="endCity" value="{startCity}"/>
+                    <set var="endSlot" value="{X}"/>
+                    <set var="endAddress" value="{Y}"/>
+                    <set var="endCity" value="{Z}"/>
                     <set var="endLat" value="{LAT}"/>
                     <set var="endLon" value="{LON}"/>
 
@@ -355,8 +387,16 @@
                     <if var="a_m" value="ASK_END_SLOT"/>
                     <if var="newInformation" relation="contains" value="UU"/>
 
-                    <if var="newInformation" relation="contains" value="Answer(false)"/>
-                    <if var="newInformation" relation="!contains" value="Address(*)"/>
+                    <or>
+                        <and>
+                            <if var="newInformation" relation="contains" value="Answer(false)"/>
+                            <if var="newInformation" relation="!contains" value="Address(*)"/>
+                        </and>
+                        <and>
+                            <if var="newInformation" relation="contains" value="Answer(true)"/>
+                            <if var="newInformation" relation="contains" value="Address(*)"/>
+                        </and>
+                    </or>
                 </condition>
                 <effect>
                     <set var="newInformation" value="[]"/>
@@ -369,21 +409,11 @@
                     <if var="a_m" value="ASK_END_SLOT_MORE"/>
                     <if var="newInformation" relation="contains" value="UU"/>
 
-                    <or>
-                        <and>
-                            <if var="newInformation" relation="!contains" value="Answer(*)"/>
-                            <if var="newInformation" relation="!contains" value="Address(*)"/>
-                        </and>
-                        <and>
-                            <if var="newInformation" relation="contains" value="Answer(true)"/>
-                            <if var="newInformation" relation="contains" value="Address({A})"/>
-                            <if var="startSlot" relation="!=" value="{S}"/>
-                        </and>
-                    </or>
+                    <if var="newInformation" relation="!contains" value="Slot(*)"/>
                 </condition>
                 <effect>
                     <set var="newInformation" value="[]"/>
-                    <set var="a_m" value="ASK_END_SLOT"/>
+                    <set var="a_m" value="ASK_END_SLOT_MORE"/>
                 </effect>
             </case>
 
@@ -413,12 +443,27 @@
                 </condition>
                 <effect>
                     <set var="endSlot" value="Missing"/>
+                    <set var="endAddress" value="Missing"/>
                     <set var="endCity" value="Missing"/>
                     <set var="endLat" value="Missing"/>
                     <set var="endLon" value="Missing"/>
 
                     <set var="newInformation" value="[]"/>
                     <set var="a_m" value="ASK_END_SLOT"/>
+                </effect>
+            </case>
+            <case>
+                <!--The user didn't respond significantly to the city confirmation question -->
+                <condition>
+                    <if var="current_step" value="INFORMATION_RETRIEVAL"/>
+                    <if var="a_m" value="ASK_END_CITY_CONFIRM"/>
+                    <if var="newInformation" relation="contains" value="UU"/>
+
+                    <if var="newInformation" relation="!contains" value="Answer(*)"/>
+                </condition>
+                <effect>
+                    <set var="newInformation" value="[]"/>
+                    <set var="a_m" value="ASK_END_CITY_CONFIRM"/>
                 </effect>
             </case>
         </rule>
@@ -608,6 +653,7 @@
                 <effect>
                     <!-- Reset -->
                     <set var="startSlot" value="Missing"/>
+                    <set var="sortedSlots" value="[]"/>
                     <set var="startCity" value="Missing"/>
                     <set var="startSlotToBeDefined" value="false"/>
                     <set var="startDate" value="Missing"/>

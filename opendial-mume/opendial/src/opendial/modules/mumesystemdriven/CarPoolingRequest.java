@@ -1,4 +1,4 @@
-package opendial.modules.mumeuserdriven;
+package opendial.modules.mumesystemdriven;
 
 import opendial.DialogueState;
 import opendial.DialogueSystem;

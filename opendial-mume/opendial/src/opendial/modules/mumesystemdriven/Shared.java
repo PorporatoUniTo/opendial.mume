@@ -1,4 +1,4 @@
-package opendial.modules.mumeuserdriven;
+package opendial.modules.mumesystemdriven;
 
 import java.util.*;
 import java.util.logging.Logger;
@@ -44,7 +44,9 @@ public class Shared {
     public static final int HOUR = 60;
 
     // public static final double DISTANCE_THRESHOLD = 0.1;
-    public static final double DISTANCE_THRESHOLD = 1;
+    public static final double DISTANCE_THRESHOLD = 5;
+
+
 
     // Google Maps
     public static final String KEY = "key=";
@@ -57,6 +59,7 @@ public class Shared {
     public static final String INPUT_TYPE = "inputtype=textquery";
     public static final String FIELDS = "fields=formatted_address,geometry/location";
     public static final String LOCATION_BIAS = "locationbias=point:";
+    public static final String LOCATION_BIAS_RECTANGLE = "locationbias=rectangle:44.50,7.25|45.50,8.00";
 
     /**
      * Google service URL to get the current location of the user
@@ -69,12 +72,12 @@ public class Shared {
     public static final String MAPS_GEOCODING = "https://maps.googleapis.com/maps/api/geocode/json?";
     public static final String LAT_LNG = "latlng=";
     public static final String GEOCODING_RESULT_TYPES = "result_type=";
-    public static final String GEOCODING_LOCALITY = "administrative_area_level_3|locality";
+    public static final String GEOCODING_LOCALITY = "route|locality";
 
     /**
      * Google service URL to get the address' parts out of an address
      */
-    public static final String ADDRESS = "address=";
+    public static final String GOOGLE_API_ADDRESS = "address=";
     public static final String AREA_BOUNDING = "bounds=44.50,7.25|45.50,8.00";
     public static final String REGION = "region=it";
 
@@ -83,11 +86,14 @@ public class Shared {
      */
     public static final String LATITUDE = "lat";
     public static final String LONGITUDE = "lng";
+    public static final String CANDIDATES = "candidates";
     public static final String COMPLETE_ADDRESS = "formatted_address";
     public static final String COMPONENTS = "address_components";
-    public static final String LONG_ADDRESS = "long_name";
+    public static final String LONG_NAME = "long_name";
     public static final String RESULTS = "results";
-
+    public static final String COMPONENT_TYPES = "types";
+    public static final String ROUTE = "route";
+    public static final String LOCALITY = "locality";
     /*
 
     // Nominatim

@@ -1,4 +1,4 @@
-package opendial.modules.mumeuserdriven;
+package opendial.modules.mumesystemdriven;
 
 public class HaversineDistanceKilometers {
     public static final double R = 6372.8; // In kilometers

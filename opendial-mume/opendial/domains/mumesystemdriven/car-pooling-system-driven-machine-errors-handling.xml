@@ -11,7 +11,7 @@
                     <if var="newInformation" relation="contains" value="Error(PastTimeError)"/>
                 </condition>
                 <effect>
-                    <set var="u_m" value="Mi spiace, data e ora non possono essere gia' passate..."/>
+                    <set var="u_m" value="Mi spiace, data e ora di partenza non possono essere gia' passate..."/>
 
                     <set var="newInformation" value="[]"/>
                     <set var="a_m" value="ASK_START_TIME_MORE"/>
@@ -24,11 +24,11 @@
                     <if var="a_m" relation="in" value="[ASK_END_TIME,ASK_END_TIME_MORE]"/>
                     <if var="newInformation" relation="contains" value="UE"/>
 
-                    <!-- TODO: check startDate consistency -->
                     <if var="newInformation" relation="contains" value="Error(PastTimeError)"/>
                 </condition>
                 <effect>
-                    <set var="u_m" value="Mi spiace, data e ora non possono essere gia' passate..."/>
+                    <set var="u_m"
+                         value="Mi spiace, data e ora di arrivo non possono essere gia' passate o precedenti a quelle di partenza..."/>
 
                     <set var="newInformation" value="[]"/>
                     <set var="a_m" value="ASK_END_TIME_MORE"/>

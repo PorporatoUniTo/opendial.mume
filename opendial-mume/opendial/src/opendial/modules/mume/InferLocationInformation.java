@@ -85,7 +85,7 @@ class InferLocationInformation {
         List<Slot> sortedSlots = Arrays.stream(oldInformation.getOrDefault((isStart) ? START_SORTED_SLOTS : END_SORTED_SLOTS, "").split(","))
                 .map(Slot::getById).filter(s -> s != null).collect(Collectors.toList());
 
-        log.info("Partial 1 " + ((isStart) ? "Start" : "End") + " Sorted Slots: " + sortedSlots);
+        // log.info("Partial 1 " + ((isStart) ? "Start" : "End") + " Sorted Slots: " + sortedSlots);
 
         log.info(((isStart) ? "Start" : "End") + " City : " + city);
         log.info(((isStart) ? "Start" : "End") + " Address: " + address);
@@ -124,7 +124,7 @@ class InferLocationInformation {
             // Filter the slots based on the city explicitly communicated by the user
             sortedSlots = sortSlots((sortedSlots.isEmpty()) ? new LinkedList<>(Arrays.asList(Slot.values())) : sortedSlots, false, city, slot.getLatitude(), slot.getLongitude());
 
-            log.info("Partial 2 " + ((isStart) ? "Start" : "End") + " Sorted Slots: " + sortedSlots);
+            // log.info("Partial 2 " + ((isStart) ? "Start" : "End") + " Sorted Slots: " + sortedSlots);
             // City (3) - InferredCity (4)
             // If the user did not comminicate a city, just retrieve the (first) slots's one
             if (city == null && !sortedSlots.isEmpty()) {
@@ -189,7 +189,7 @@ class InferLocationInformation {
 
                     sortedSlots = sortSlots(new LinkedList<>(Arrays.asList(Slot.values())), true, ((!inferredCity) ? city : null), Double.parseDouble(location.get(LATITUDE).getAsString()), Double.parseDouble(location.get(LONGITUDE).getAsString()));
 
-                    log.info("Partial 3 " + ((isStart) ? "Start" : "End") + " Sorted Slots: " + sortedSlots);
+                    // log.info("Partial 3 " + ((isStart) ? "Start" : "End") + " Sorted Slots: " + sortedSlots);
                     if (!sortedSlots.isEmpty()) {
                         slot = sortedSlots.get(0);
                         sortedSlots = sortedSlots.subList(1, sortedSlots.size());
@@ -229,7 +229,7 @@ class InferLocationInformation {
             // Retains only the slots in the city specified by the user and sort them by the distance from the current position if the user
             sortedSlots = sortSlots(Arrays.asList(Slot.values()), false, city, Double.parseDouble(userPositions[0]), Double.parseDouble(userPositions[1]));
 
-            log.info("Partial 4 " + ((isStart) ? "Start" : "End") + " Sorted Slots: " + sortedSlots);
+            // log.info("Partial 4 " + ((isStart) ? "Start" : "End") + " Sorted Slots: " + sortedSlots);
             if (!sortedSlots.isEmpty()) {
                 slot = sortedSlots.get(0);
                 sortedSlots = sortedSlots.subList(1, sortedSlots.size());
@@ -290,7 +290,7 @@ class InferLocationInformation {
             // Do not filter by city, the user did not give that
             sortedSlots = sortSlots(Arrays.asList(Slot.values()), true, null, Double.parseDouble(userPositions[0]), Double.parseDouble(userPositions[1]));
 
-            log.info("Partial 5 " + ((isStart) ? "Start" : "End") + " Sorted Slots: " + sortedSlots);
+            // log.info("Partial 5 " + ((isStart) ? "Start" : "End") + " Sorted Slots: " + sortedSlots);
             if (!sortedSlots.isEmpty()) {
                 slot = sortedSlots.get(0);
                 sortedSlots = sortedSlots.subList(1, sortedSlots.size());
