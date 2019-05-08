@@ -1,4 +1,4 @@
-package opendial.modules.mume.information;
+package opendial.modules.mumedefault.information;
 
 import edu.stanford.nlp.ling.CoreAnnotations;
 import edu.stanford.nlp.ling.CoreLabel;

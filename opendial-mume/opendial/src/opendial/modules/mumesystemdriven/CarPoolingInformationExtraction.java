@@ -475,19 +475,7 @@ public class CarPoolingInformationExtraction implements Module {
 
                 /* If the user knows the name of the parking slot and give it, no need of Google */
                 if (!slots.isEmpty()) {
-                    /*
                     // Sort the slots given by the user (hopefully just one)...
-                    sortedSlots = slots.stream()
-                            // ... by distance from the user's current position
-                            .sorted((s1, s2) -> {
-                                double latDiff1 = Double.parseDouble(userPositions[0]) - s1.getLatitude();
-                                double lonDiff1 = Double.parseDouble(userPositions[1]) - s1.getLongitude();
-                                double latDiff2 = Double.parseDouble(userPositions[0]) - s2.getLatitude();
-                                double lonDiff2 = Double.parseDouble(userPositions[1]) - s2.getLongitude();
-                                return Double.compare(Math.sqrt(latDiff1 * latDiff1 + lonDiff1 * lonDiff1), Math.sqrt(latDiff2 * latDiff2 + lonDiff2 * lonDiff2));
-                            }).collect(Collectors.toList());
-                    */
-
                     sortedSlots = sortSlots(slots, false, "", userPositions[0], userPositions[1]);
 
                     // Filter the slots based on the city explicitly communicated by the user
@@ -588,26 +576,6 @@ public class CarPoolingInformationExtraction implements Module {
                                 }
                             }
 
-                        /*
-                        Stream<Slot> sortedSlotsStream = Arrays.stream(Slot.values()).filter(s -> {
-                            double latDiff = location.get("lat").getAsDouble() - s.getLatitude();
-                            double lonDiff = location.get("lng").getAsDouble() - s.getLongitude();
-                            return Math.sqrt(latDiff * latDiff + lonDiff * lonDiff) < DISTANCE_THRESHOLD;
-                        });
-                        // If the user gave the city, retain only the slot of that city
-                        if (!inferredCity) {
-                            String effectivelyFinalCity = city;
-                            sortedSlotsStream = sortedSlotsStream.filter(s -> s.getCity().name().equals(effectivelyFinalCity));
-                        }
-                        sortedSlots = sortedSlotsStream.sorted((s1, s2) -> {
-                            double latDiff1 = location.get("lat").getAsDouble() - s1.getLatitude();
-                            double lonDiff1 = location.get("lng").getAsDouble() - s1.getLongitude();
-                            double latDiff2 = location.get("lat").getAsDouble() - s2.getLatitude();
-                            double lonDiff2 = location.get("lng").getAsDouble() - s2.getLongitude();
-                            return Double.compare(Math.sqrt(latDiff1 * latDiff1 + lonDiff1 * lonDiff1), Math.sqrt(latDiff2 * latDiff2 + lonDiff2 * lonDiff2));
-                        }).collect(Collectors.toList());
-                        */
-
                             sortedSlots = sortSlots(Arrays.asList(Slot.values()), true, ((!inferredCity) ? city : ""), location.get(LATITUDE).getAsString(), location.get(LONGITUDE).getAsString());
 
                             if (!sortedSlots.isEmpty()) {
@@ -641,20 +609,6 @@ public class CarPoolingInformationExtraction implements Module {
                     // Retrieve the city gave by the user
                     city = cities.get(0).getName();
 
-                    /*
-                    sortedSlots = Arrays.stream(Slot.values()).filter(s -> {
-                        double latDiff = Double.parseDouble(userPositions[0]) - s.getLatitude();
-                        double lonDiff = Double.parseDouble(userPositions[1]) - s.getLongitude();
-                        return Math.sqrt(latDiff * latDiff + lonDiff * lonDiff) < DISTANCE_THRESHOLD;
-                    }).filter(s -> s.getCity().name().equals(effectivelyFinalCity)).sorted((s1, s2) -> {
-                        double latDiff1 = Double.parseDouble(userPositions[0]) - s1.getLatitude();
-                        double lonDiff1 = Double.parseDouble(userPositions[1]) - s1.getLongitude();
-                        double latDiff2 = Double.parseDouble(userPositions[0]) - s2.getLatitude();
-                        double lonDiff2 = Double.parseDouble(userPositions[1]) - s2.getLongitude();
-                        return Double.compare(Math.sqrt(latDiff1 * latDiff1 + lonDiff1 * lonDiff1), Math.sqrt(latDiff2 * latDiff2 + lonDiff2 * lonDiff2));
-                    }).collect(Collectors.toList());
-                    */
-
                     // Retains only the slot in the city specified by the user and sort them by the distance from the current position if the user
                     sortedSlots = sortSlots(Arrays.asList(Slot.values()), false, city, userPositions[0], userPositions[1]);
 
@@ -681,19 +635,6 @@ public class CarPoolingInformationExtraction implements Module {
                 }
                 /* Otherwise, select the nearest slot to the current position of th user if s/he indicate that wants to start from there */
                 else if (hereAnswer(tokens)) {
-//                    // Retrive the address and the city of the current user postion
-//                    try {
-//                        JsonObject currentUserAddress = parser.parse(getGoogleMapsResponseJSON(getMapsReverseGeocodingURL(userCurrentPosition, GEOCODING_LOCALITY), false, "")).getAsJsonObject();
-//                        if (currentUserAddress != null && currentUserAddress.get("status").getAsString().equals("OK") && currentUserAddress.get("results").getAsJsonArray().size() > 0) {
-//                            JsonObject bestResult = currentUserAddress.get(RESULTS).getAsJsonArray().get(0).getAsJsonObject();
-//                            address = bestResult.get(COMPLETE_ADDRESS).getAsString();
-//                            city = bestResult.get(COMPONENTS).getAsJsonArray().get(0).getAsJsonObject().get(LONG_NAME).getAsString();
-//                            // Do not ask confirmation about the city, the user does not care
-//                            inferredCity = false;
-//                        }
-//                    } catch (MalformedURLException excpetion) {
-//                        excpetion.printStackTrace();
-//                    }
                     // Retrive the address and the city of the current user position
                     JsonObject currentUserAddress = null;
                     try {
@@ -765,6 +706,8 @@ public class CarPoolingInformationExtraction implements Module {
                         system.addContent("sortedStartSlots", sortedSlots.stream().map(Slot::toString).collect(Collectors.joining(",")));  // 7
                     else if (machineIntent.contains("END_SLOT") && !sortedSlots.isEmpty())
                         system.addContent("sortedEndSlots", sortedSlots.stream().map(Slot::toString).collect(Collectors.joining(",")));  // 7
+                    else if (machineIntent.contains("END_SLOT") && state.hasChanceNode("sortedStartSlots"))
+                        system.addContent("sortedEndSlots", state.queryProb("sortedStartSlots").getBest().toString());
                     processedLocationAnnotations.add("Address(" + address + ")");   // 2
                     processedLocationAnnotations.add(((inferredCity) ? "InferredCity(" : "City(") + city + ")");    // 3 - 4
                     processedLocationAnnotations.add("Lat(" + String.valueOf(lat)   // 5

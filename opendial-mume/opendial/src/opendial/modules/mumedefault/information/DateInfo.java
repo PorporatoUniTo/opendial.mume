@@ -1,4 +1,4 @@
-package opendial.modules.mume.information;
+package opendial.modules.mumedefault.information;
 
 import edu.stanford.nlp.ling.CoreAnnotations;
 import edu.stanford.nlp.ling.CoreLabel;
@@ -13,7 +13,7 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.stream.Collectors;
 
-import static opendial.modules.mume.config.Shared.CASES;
+import static opendial.modules.mumedefault.config.Shared.CASES;
 
 public class DateInfo {
     public static final int WEEK_DAY_NUMBER = 7;

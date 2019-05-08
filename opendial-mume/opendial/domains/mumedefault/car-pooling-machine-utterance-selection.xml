@@ -1,0 +1,136 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<domain id="MachineUtterance">
+
+    <model id="OutcomeElaboration" trigger="a_m">
+        <rule id="OutputComunication">
+            <case>
+                <condition>
+                    <if var="a_u" value="BOOKING"/>
+                    <if var="state" value="ELABORATE_REQUEST"/>
+                    <if var="a_m" value="OUTCOME_COMMUNICATION"/>
+                    <if var="requestResult" value="Success"/>
+                </condition>
+                <effect util="10">
+                    <set var="u_m" value="La tua richiesta e' stata accettata. Buon viaggio!"/>
+                </effect>
+            </case>
+            <case>
+                <condition>
+                    <if var="a_u" value="BOOKING"/>
+                    <if var="state" value="ELABORATE_REQUEST"/>
+                    <if var="a_m" value="OUTCOME_COMMUNICATION"/>
+                    <if var="requestResult" value="Failure"/>
+                </condition>
+                <effect util="10">
+                    <set var="u_m" value="Spiacente, la tua richiesta non e' stata accettata."/>
+                </effect>
+            </case>
+        </rule>
+    </model>
+
+    <model id="RetrieveInformation" trigger="a_m">
+        <rule>
+            <case>
+                <condition>
+                    <if var="a_u" value="BOOKING"/>
+                    <if var="state" value="INFORMATION_EXTRACTION"/>
+                    <if var="a_m" value="ASK_INFO_START_DATE"/>
+                </condition>
+                <effect util="6">
+                    <set var="a_m-prev" value="{a_m}"/>
+                    <set var="u_m" value="Quando vuoi partire?"/>
+                    <set var="a_m" value="RETRIEVE_INFORMATION"/>
+                </effect>
+            </case>
+        </rule>
+        <rule>
+            <case>
+                <condition>
+                    <if var="a_u" value="BOOKING"/>
+                    <if var="state" value="INFORMATION_EXTRACTION"/>
+                    <if var="a_m" value="ASK_INFO_START_TIME"/>
+                </condition>
+                <effect util="4">
+                    <set var="a_m-prev" value="{a_m}"/>
+                    <set var="u_m" value="A che ora vuoi partire?"/>
+                    <set var="a_m" value="RETRIEVE_INFORMATION"/>
+                </effect>
+            </case>
+        </rule>
+        <rule>
+            <case>
+                <condition>
+                    <if var="a_u" value="BOOKING"/>
+                    <if var="state" value="INFORMATION_EXTRACTION"/>
+                    <if var="a_m" value="ASK_INFO_END_TIME_AND_DATE"/>
+                </condition>
+                <effect util="5">
+                    <set var="a_m-prev" value="{a_m}"/>
+                    <set var="u_m" value="Sai quando poserai l'auto?"/>
+                    <set var="a_m" value="RETRIEVE_INFORMATION"/>
+                </effect>
+            </case>
+        </rule>
+        <rule>
+            <case>
+                <condition>
+                    <if var="a_u" value="BOOKING"/>
+                    <if var="state" value="INFORMATION_EXTRACTION"/>
+                    <if var="a_m" value="ASK_INFO_END_DATE"/>
+                </condition>
+                <effect util="5">
+                    <set var="a_m-prev" value="{a_m}"/>
+                    <set var="u_m" value="Quando vuoi posare l'auto?"/>
+                    <set var="a_m" value="RETRIEVE_INFORMATION"/>
+                </effect>
+            </case>
+        </rule>
+        <rule>
+            <case>
+                <condition>
+                    <if var="a_u" value="BOOKING"/>
+                    <if var="state" value="INFORMATION_EXTRACTION"/>
+                    <if var="a_m" value="ASK_INFO_END_TIME"/>
+                </condition>
+                <effect util="3">
+                    <set var="a_m-prev" value="{a_m}"/>
+                    <set var="u_m" value="Fino a che ora vuoi usare l'auto?"/>
+                    <set var="a_m" value="RETRIEVE_INFORMATION"/>
+                </effect>
+            </case>
+        </rule>
+        <rule>
+            <case>
+                <condition>
+                    <if var="a_u" value="BOOKING"/>
+                    <if var="state" value="INFORMATION_EXTRACTION"/>
+                    <if var="a_m" value="ASK_INFO_START_SLOT"/>
+                </condition>
+                <effect util="2">
+                    <set var="a_m-prev" value="{a_m}"/>
+                    <set var="u_m" value="Da dove vuoi partire?"/>
+                    <set var="a_m" value="RETRIEVE_INFORMATION"/>
+                </effect>
+            </case>
+        </rule>
+    </model>
+
+    <model id="AskConfirm" trigger="a_m">
+        <rule>
+            <case>
+                <condition>
+                    <if var="a_u" value="BOOKING"/>
+
+                    <if var="state" value="INFORMATION_EXTRACTION"/>
+
+                    <if var="a_m" value="ASK_CONFIRM"/>
+                </condition>
+                <effect util="10">
+                    <set var="u_m" value="Ricapitolando: vuoi partire il {startDate} alle {startTime}
+                        da {startSlot} a {startCity} con un veicolo {vehicleType} e posarlo il {endDate} alle {endTime} a {endSlot} a {endCity}. Giusto?"/>
+                    <set var="a_m" value="WAIT_CONFIRM"/>
+                </effect>
+            </case>
+        </rule>
+    </model>
+</domain>

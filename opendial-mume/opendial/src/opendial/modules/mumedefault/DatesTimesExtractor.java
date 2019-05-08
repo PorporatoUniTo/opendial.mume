@@ -1,4 +1,4 @@
-package opendial.modules.mume;
+package opendial.modules.mumedefault;
 
 import edu.stanford.nlp.ling.CoreAnnotations;
 import edu.stanford.nlp.ling.CoreLabel;
@@ -6,9 +6,9 @@ import edu.stanford.nlp.ling.IndexedWord;
 import edu.stanford.nlp.pipeline.Annotation;
 import edu.stanford.nlp.semgraph.SemanticGraph;
 import edu.stanford.nlp.semgraph.SemanticGraphCoreAnnotations;
-import opendial.modules.mume.information.DateInfo;
-import opendial.modules.mume.information.DurationInfo;
-import opendial.modules.mume.information.TimeInfo;
+import opendial.modules.mumedefault.information.DateInfo;
+import opendial.modules.mumedefault.information.DurationInfo;
+import opendial.modules.mumedefault.information.TimeInfo;
 
 import java.time.ZonedDateTime;
 import java.util.Iterator;
@@ -16,9 +16,9 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
-import static opendial.modules.mume.config.Shared.*;
-import static opendial.modules.mume.information.DurationInfo.DURATIONS_SEPARATOR;
-import static opendial.modules.mume.information.TimeInfo.QUARTER;
+import static opendial.modules.mumedefault.config.Shared.*;
+import static opendial.modules.mumedefault.information.DurationInfo.DURATIONS_SEPARATOR;
+import static opendial.modules.mumedefault.information.TimeInfo.QUARTER;
 
 class DatesTimesExtractor {
     private static DatesTimesExtractor extractor = null;
@@ -69,6 +69,8 @@ class DatesTimesExtractor {
             List<TimeInfo> times = timeAnnotations.stream().map(a -> new TimeInfo(a, tokens, dependencies)).collect(Collectors.toList());
             List<DurationInfo> durs = durationAnnotations.stream().map(a -> new DurationInfo(a, tokens, dependencies)).collect(Collectors.toList());
             boolean nowClue = false;
+            boolean unkownEndTime = false;
+            boolean knownEndTime = false;
 
             log.info("Dates:\t" + dateAnnotations.toString());
             dates.forEach(d -> log.info(d.toString()));
@@ -133,7 +135,6 @@ class DatesTimesExtractor {
                     /* DATES */
                     for (DateInfo date : dates) {
                         if (DEPENDANT_DATE_CASE.contains(date.getCaseType())) {
-//                            log.info(String.valueOf(true));
                             /* "... dal 20 febbraio... al 21..." */
                             if (newEndDate == null &&
                                     newStartDate != null && STRONG_START_DATE_CASE.contains(newStartDate.getCaseType())) {
@@ -187,6 +188,7 @@ class DatesTimesExtractor {
                         }
                     }
 
+
                     /* If no change occurred in the current iteration, exit */
                     if ((previousStartDate == null && newStartDate == null || previousStartDate != null && previousStartDate.equals(newStartDate)) &&
                             (previousEndDate == null && newEndDate == null || previousEndDate != null && previousEndDate.equals(newEndDate)) &&
@@ -205,10 +207,10 @@ class DatesTimesExtractor {
                 /* DATES */
                 for (DateInfo date : dates) {
                     if (newStartDate == null && !date.isEnd && /* START_VERBS.contains(date.getFirstVerbGovernorLemma()) */
-                            !date.getFirstVerbGovernorLemma().isEmpty() && !END_VERBS.contains(date.getFirstVerbGovernorLemma())) {
+                            !date.getFirstVerbGovernorLemma().isEmpty() && !TIME_END_VERBS.contains(date.getFirstVerbGovernorLemma())) {
                         newStartDate = date;
                         date.isStart = true;
-                    } else if (newEndDate == null && !date.isStart && END_VERBS.contains(date.getFirstVerbGovernorLemma())) {
+                    } else if (newEndDate == null && !date.isStart && TIME_END_VERBS.contains(date.getFirstVerbGovernorLemma())) {
                         newEndDate = date;
                         date.isEnd = true;
                     }
@@ -218,15 +220,15 @@ class DatesTimesExtractor {
                 for (TimeInfo time : times) {
                     // log.info(time.getFirstVerbGovernorLemma());
                     if (newStartTime == null && !time.isEnd &&
-                            !time.getFirstVerbGovernorLemma().isEmpty() && !END_VERBS.contains(time.getFirstVerbGovernorLemma())) {
+                            !time.getFirstVerbGovernorLemma().isEmpty() && !TIME_END_VERBS.contains(time.getFirstVerbGovernorLemma())) {
                         newStartTime = time;
                         time.isStart = true;
-                    } else if (newEndTime == null && !time.isStart &&
-                            END_VERBS.contains(time.getFirstVerbGovernorLemma())) {
+                    } else if (newEndTime == null && !time.isStart && TIME_END_VERBS.contains(time.getFirstVerbGovernorLemma())) {
                         newEndTime = time;
                         time.isEnd = true;
                     }
                 }
+
 
                 /* If no chnge occurred in the current iteration, exit */
                 if ((previousStartDate == null && newStartDate == null || previousStartDate != null && previousStartDate.equals(newStartDate)) &&
@@ -264,6 +266,7 @@ class DatesTimesExtractor {
             }
 
 
+            // TODO check
             if (!machinePrevState.endsWith("SLOT"))
                 for (CoreLabel token : tokens)
                     if (NOW_WORDS.contains(token.originalText().toLowerCase()))
@@ -275,21 +278,53 @@ class DatesTimesExtractor {
             }
 
 
+            /* ONLY WORK WHEN THE SYSTEM DO NOT ASK FOR END TIME AND/OR DATE
             if (newEndTime == null && newStartTime == null && newDuration == null &&
                     times.size() == 1 && DEPENDANT_TIME_CASE.contains(times.get(0).getCaseType())) {
                 newStartTime = times.get(0);
                 times.get(0).isStart = true;
             }
+             */
 
 
             /* Check if the user is answering to targetted questions */
+            // FIXME select the not yet assigned date/time in the case of more than one is present
             if ((times.size() == 1 && !times.get(0).isEnd || times.size() == 2 && newEndTime != null) && newStartTime == null && (machinePrevState.endsWith("START_TIME") || machinePrevState.endsWith("START_DATE"))) {
                 newStartTime = times.get(0);
                 times.get(0).isStart = true;
-            } else if ((dates.size() == 1 && !dates.get(0).isEnd || dates.size() == 2 && newEndDate != null) && newStartDate == null && machinePrevState.endsWith("START_DATE")) {
+            }
+            if ((dates.size() == 1 && !dates.get(0).isEnd || dates.size() == 2 && newEndDate != null) && newStartDate == null && machinePrevState.endsWith("START_DATE")) {
                 newStartDate = dates.get(0);
                 dates.get(0).isStart = true;
             }
+            if ((times.size() == 1 && !times.get(0).isStart || times.size() == 2 && newStartTime != null) && newEndTime == null && (machinePrevState.endsWith("END_TIME_AND_DATE") || machinePrevState.endsWith("END_TIME") || machinePrevState.endsWith("END_DATE"))) {
+                newEndTime = times.get(0);
+                times.get(0).isEnd = true;
+            }
+            if ((dates.size() == 1 && !dates.get(0).isStart || dates.size() == 2 && newStartDate != null) && newEndDate == null && (machinePrevState.endsWith("END_TIME_AND_DATE") || machinePrevState.endsWith("END_DATE"))) {
+                newEndDate = dates.get(0);
+                dates.get(0).isEnd = true;
+            }
+
+            if (machinePrevState.endsWith("END_TIME_AND_DATE"))
+                // Check for 'no' answer
+                for (CoreLabel token : annotatedUserUtterance.get(CoreAnnotations.TokensAnnotation.class))
+                    // Check for 'no' answer
+                    if (negativeAnswers.contains(token.originalText()))
+                        unkownEndTime = true;
+                        // Check for 'yes' answer
+                    else if (positiveAnswers.contains(token.originalText()))
+                        knownEndTime = true;
+            // Check for 'no' composite ('non lo so') answer
+            if (!knownEndTime && !unkownEndTime) {
+                String sentence = annotatedUserUtterance.get(CoreAnnotations.TokensAnnotation.class).stream().map(CoreLabel::originalText).collect(Collectors.joining(" "));
+                for (int i = 0; !unkownEndTime && i < negativeCompositeAnswers.size(); i++)
+                    if (sentence.contains(negativeCompositeAnswers.get(i)))
+                        unkownEndTime = true;
+            }
+
+
+            //TODO better duration handling (from now [tra/fra], from start [per/dopo], ...)
 
 
             log.info("Extracted Start Time: " + newStartTime);
@@ -298,6 +333,7 @@ class DatesTimesExtractor {
             log.info("Extracted End Date: " + newEndDate);
             log.info("Extracted Duration: " + newDuration);
             log.info("Extracted 'now': " + nowClue);
+            log.info("The User Knows End Time: " + !unkownEndTime + " / " + knownEndTime);
 
 
             /* information has not been updated yet: propagate old information */
@@ -364,13 +400,15 @@ class DatesTimesExtractor {
                 information.put(START_DATE, date);
             }
             // Otherwise, the user may beeing answering a direct question
-            else if (nowClue && !machinePrevState.endsWith("SLOT") && information.get(START_DATE).equals(NONE))
-                information.put(START_DATE, String.format("%04d-%02d-%02d", now.getYear(), now.getMonthValue(), now.getDayOfMonth()));
+            else if (nowClue && !machinePrevState.endsWith("SLOT"))
+                if (machinePrevState.contains("START") && information.get(START_DATE).equals(NONE))
+                    information.put(START_DATE, String.format("%04d-%02d-%02d", now.getYear(), now.getMonthValue(), now.getDayOfMonth()));
+                else if (machinePrevState.contains("START") && information.get(END_DATE).equals(NONE))
+                    information.put(END_DATE, String.format("%04d-%02d-%02d", now.getYear(), now.getMonthValue(), now.getDayOfMonth()));
 
             if (newEndDate != null) {
                 String date = newEndDate.getDate();
                 String[] startDateFields = information.get(START_DATE).split("-");
-                ;
                 if (date.split("-").length < 3) {
                     // The start date or the current date if endDate == Missing
                     //  this happens when the user give only the month OR
@@ -404,6 +442,7 @@ class DatesTimesExtractor {
                 }
                 information.put(END_DATE, date);
             }
+            /*
             // If the user cummunicated only the end hour, probably the end date is the same as the start date
             //  (or today if startDate == Missing)
             else if (newEndTime != null && information.get(END_DATE).equals(NONE)) {
@@ -420,7 +459,7 @@ class DatesTimesExtractor {
             //  The system assums that the endDate is the same as the startDate
             else if (information.get(END_DATE).equals(NONE) && !information.get(START_DATE).equals(NONE))
                 information.put(END_DATE, information.getOrDefault(START_DATE, NONE));
-
+            */
 
             if (newStartTime != null) {
                 String[] newTimeFields = newStartTime.getTime().split(":");
@@ -452,10 +491,10 @@ class DatesTimesExtractor {
                 information.put(START_TIME, String.format("%s:%s", newTimeFields[0], newTimeFields[1]).replace(":", "-"));
             }
             // Otherwise, the user may beeing answering a direct question
-            else if ((newStartDate != null && newStartDate.isNow || nowClue && !machinePrevState.endsWith("TIME")) && information.get(START_TIME).equals(NONE))
+            else if ((newStartDate != null && newStartDate.isNow || nowClue && !machinePrevState.endsWith("SLOT")) && information.get(START_TIME).equals(NONE))
                 information.put(START_TIME, TimeInfo.roundToPreviousQuarter(String.format("%02d:%02d", now.getHour(), now.getMinute())).replace(":", "-"));
-                // The user is giving the strat date as a time laps: "voglio partire tra due ore"
-            else if (newDuration != null && !machinePrevState.endsWith("SLOT") &&
+                // The user has giveng the start date as a time laps: "voglio partire tra due ore"
+            else if (newDuration != null && (machinePrevState.endsWith("START_TIME") || machinePrevState.endsWith("START_DATE")) &&
                     // The duration is valid, and not e.g. "sera"
                     (newDuration.getYears() != 0 ||
                             newDuration.getMonths() != 0 ||
@@ -468,14 +507,14 @@ class DatesTimesExtractor {
                     startDate = String.format("%04d-%02d-%02d", now.getYear(), now.getMonthValue(), now.getDayOfMonth());
                 String[] dur = TimeInfo.roundToNextQuarter(newDuration.toEnd(startTime, startDate)).split(DURATIONS_SEPARATOR);
 
-                log.info("Final Duration:\t" + dur[0] + " | " + dur[1]);
-
                 if (information.get(START_TIME).equals(NONE))
                     information.put(START_TIME, dur[0].replace(":", "-"));
                 if (information.get(START_DATE).equals(NONE))
                     information.put(START_DATE, dur[1]);
+                /*
                 if (information.get(END_DATE).equals(NONE))
                     information.put(END_DATE, dur[1]);
+                */
             }
             /* If the user gave just the startTime, likely the startDate is 'today' */
             if (!information.getOrDefault(START_TIME, NONE).equals(NONE) &&
@@ -487,9 +526,8 @@ class DatesTimesExtractor {
 
                 String[] startDateFields = information.get(START_DATE).split("-");
                 if (startDateFields.length < 3) {
-                    // startDate == Missing: update
                     startDateFields = new String[]{String.format("%04d", now.getYear()), String.format("%02d", now.getMonthValue()), String.format("%02d", now.getDayOfMonth())};
-                    information.put(START_DATE, String.format("%s-%s-%s", startDateFields[0], startDateFields[1], startDateFields[2]));
+                    // information.put(START_DATE, String.format("%s-%s-%s", startDateFields[0], startDateFields[1], startDateFields[2]));
                 }
                 String[] endDateFields = information.get(END_DATE).split("-");
                 if (endDateFields.length < 3) {
@@ -520,7 +558,7 @@ class DatesTimesExtractor {
                 // OpenDial has some problem with ':', so replace it with '-' in time information
                 information.put(END_TIME, String.format("%s:%s", newTimeFields[0], newTimeFields[1]).replace(":", "-"));
             } else if (newDuration != null &&
-                    !(machinePrevState.endsWith("TIME") || machinePrevState.endsWith("DATE")) &&  // TODO check
+                    (machinePrevState.endsWith("END_TIME") || machinePrevState.endsWith("END_DATE") || machinePrevState.endsWith("END_TIME_AND_DATE")) &&  // TODO check
                     (newDuration.getYears() != 0 ||
                             newDuration.getMonths() != 0 ||
                             newDuration.getDays() != 0 ||
@@ -536,11 +574,23 @@ class DatesTimesExtractor {
                 if (information.get(END_DATE).equals(NONE))
                     information.put(END_DATE, dur[1]);
             }
-            /* If the user gave just the endTime, likely the endDate is the startDate */
+            /* If the user gave just the endTime, likely the endDate is the startDate
             if (!information.getOrDefault(END_TIME, NONE).equals(NONE) &&
                     information.getOrDefault(END_DATE, NONE).equals(NONE) &&
                     information.getOrDefault(START_DATE, NONE).equals(NONE))
                 information.put(END_DATE, information.getOrDefault(START_DATE, NONE));
+            */
+
+
+            // The user don't know when the vehicle will be available again
+            if (machinePrevState.endsWith("END_TIME_AND_DATE"))
+                if (unkownEndTime)
+                    information.put("endTimeKnown", String.valueOf(false));
+                else if (knownEndTime)
+                    information.put("endTimeKnown", String.valueOf(true));
+            if (!information.getOrDefault(END_TIME, NONE).equals(NONE) || !information.getOrDefault(END_DATE, NONE).equals(NONE))
+                information.put("endTimeKnown", String.valueOf(true));
+
         } catch (NullPointerException exception) {
             exception.printStackTrace();
             log.severe("USER UTTERANCE:\t" + annotatedUserUtterance.toString());

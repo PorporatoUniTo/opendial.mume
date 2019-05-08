@@ -1,7 +1,15 @@
-package opendial.modules.mume.config;
+package opendial.modules.mumedefault.config;
 
+import java.io.IOException;
+import java.time.ZonedDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.*;
+import java.util.logging.FileHandler;
+import java.util.logging.LogRecord;
 import java.util.logging.Logger;
+import java.util.logging.SimpleFormatter;
+
+import static opendial.modules.mumedefault.config.Config.EXAMPLE_LOG_FILE_PREFIX;
 
 public class Shared {
     public static final String START = "start";
@@ -143,7 +151,8 @@ public class Shared {
     public static final Set<String> START_VERBS = new HashSet<>(Arrays.asList("essere", "iniziare", "partire", "prendere", "prenotare", "serve", "usare", "volere",
             // FIXME
             "prendare"));
-    public static final Set<String> END_VERBS = new HashSet<>(Arrays.asList("andare", "arrivare", "giungere", "lasciare", "posare", "raggiungere"));
+    public static final Set<String> LOCATION_END_VERBS = new HashSet<>(Arrays.asList("andare", "arrivare", "giungere", "lasciare", "posare", "raggiungere", "fermare"));
+    public static final Set<String> TIME_END_VERBS = new HashSet<>(Arrays.asList("arrivare", "lasciare", "posare", "fermare"));
 
     public static final LinkedList<String> PUNCT = new LinkedList<>(Arrays.asList(".", " ", ",", ":", ";", "?", "!"));
 
@@ -195,6 +204,76 @@ public class Shared {
     }
     */
 
+    private static final Set<String> POSITIVE_WORDS = new HashSet<>(Arrays.asList("sì", "si", "certo", "certissimo", "ok", "giusto", "giustissimo", "vero", "verissimo", "corretto"));
+    public static Set<String> positiveAnswers = new HashSet<>();
+
+    static {
+        for (String w : POSITIVE_WORDS)
+            for (int c : Arrays.asList(0, 1, 2)) {
+                String word;
+                switch (c) {
+                    case 0:
+                        word = w;
+                        break;
+                    case 1:
+                        word = w.substring(0, 1).toUpperCase() + w.substring(1);
+                        break;
+                    default:
+                        word = w.toUpperCase();
+                }
+                positiveAnswers.add(word);
+                for (String p : PUNCT)
+                    positiveAnswers.add(word + p);
+            }
+    }
+
+    private static final Set<String> NEGATIVE_WORDS = new HashSet<>(Arrays.asList("no", "sbagliato", "sbagliatissimo", "falso", "scorretto" //, "non lo so"
+    ));
+    public static Set<String> negativeAnswers = new HashSet<>();
+
+    static {
+        for (String w : NEGATIVE_WORDS)
+            for (int c : Arrays.asList(0, 1, 2)) {
+                String word;
+                switch (c) {
+                    case 0:
+                        word = w;
+                        break;
+                    case 1:
+                        word = w.substring(0, 1).toUpperCase() + w.substring(1);
+                        break;
+                    default:
+                        word = w.toUpperCase();
+                }
+                negativeAnswers.add(word);
+                for (String p : PUNCT)
+                    negativeAnswers.add(word + p);
+            }
+    }
+
+    private static final Set<String> NEGATIVE_COMPOSITE_ANSWERS = new HashSet<>(Arrays.asList("non lo so", "non importa", "non mi importa"));
+    public static List<String> negativeCompositeAnswers = new ArrayList<>();
+
+    static {
+        for (String w : NEGATIVE_COMPOSITE_ANSWERS)
+            for (int c : Arrays.asList(0, 1, 2)) {
+                String word;
+                switch (c) {
+                    case 0:
+                        word = w;
+                        break;
+                    case 1:
+                        word = w.substring(0, 1).toUpperCase() + w.substring(1);
+                        break;
+                    default:
+                        word = w.toUpperCase();
+                }
+                negativeCompositeAnswers.add(word);
+                for (String p : PUNCT)
+                    negativeCompositeAnswers.add(word + p);
+            }
+    }
+
     /* Sample vehicle type */
     public static final Map<String, List<String>> VEHICLE_TYPES = new HashMap<>();
 
@@ -210,6 +289,30 @@ public class Shared {
         VEHICLE_TYPES.put("transport", new ArrayList<>(Arrays.asList("transport", "da trasporto", "il trasporto", "van")));
     }
 
-    // logger
+    // loggers
     public static final Logger log = Logger.getLogger("MuMeLog");
+
+    public static final Logger exampleLog = Logger.getAnonymousLogger();
+
+    static {
+        try {
+            FileHandler loggerOutFile = new FileHandler(EXAMPLE_LOG_FILE_PREFIX + ZonedDateTime.now().format(DateTimeFormatter.ISO_INSTANT).replaceAll(":", "_") + ".txt");
+            loggerOutFile.setFormatter(new SimpleFormatter() {
+                private static final String format = "%s%n";
+
+                @Override
+                public synchronized String format(LogRecord lr) {
+                    return String.format(format,
+                            lr.getMessage()
+                    );
+                }
+            });
+            exampleLog.setUseParentHandlers(false);
+            exampleLog.addHandler(loggerOutFile);
+        } catch (IOException ioex) {
+            log.severe("Not able to create example logger.");
+            ioex.printStackTrace();
+        }
+
+    }
 }

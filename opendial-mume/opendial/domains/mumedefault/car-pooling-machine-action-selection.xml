@@ -1,0 +1,212 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<domain id="InformationElaboration">
+    <!-- Action selection module.
+        The only module select the next action of the machine accoding to its state -->
+
+    <!-- <model id="AgentActionSelection" trigger="startSlot,endSlot,startDate,endDate,startTime,endTime,vehicleType,u_u"> -->
+    <model id="AgentActionSelection" trigger="update">
+        <rule id="CompleteInformation">
+            <case>
+                <condition>
+                    <!-- If the user is booking a car... -->
+                    <if var="a_u" value="BOOKING"/>
+
+                    <!-- ... and all the needed information has been provided... -->
+                    <if var="state" value="INFORMATION_EXTRACTION"/>
+                    <if var="a_m" value="RETRIEVE_INFORMATION"/>
+
+                    <if var="update" value="true"/>
+
+                    <if var="startSlot" relation="!=" value="Missing"/>
+                    <if var="startDate" relation="!=" value="Missing"/>
+                    <if var="startTime" relation="!=" value="Missing"/>
+                    <if var="endSlot" relation="!=" value="Missing"/>
+                    <or>
+                        <and>
+                            <if var="endDate" relation="!=" value="Missing"/>
+                            <if var="endTime" relation="!=" value="Missing"/>
+                            <if var="endTimeKnown" value="true"/>
+                        </and>
+                        <if var="endTimeKnown" value="false"/>
+                    </or>
+                    <if var="vehicleType" relation="!=" value="Missing"/>
+                </condition>
+                <effect util="10">
+
+                    <!-- ... then make the reservation request -->
+                    <set var="a_m" value="ASK_CONFIRM"/>
+
+                    <set var="update" value="null"/>
+                </effect>
+            </case>
+        </rule>
+
+        <!-- If some some information is missing... -->
+        <rule id="MissingStartDateInformation">
+            <case>
+                <condition>
+                    <if var="update" value="true"/>
+
+                    <if var="a_u" value="BOOKING"/>
+                    <if var="state" value="INFORMATION_EXTRACTION"/>
+                    <if var="startDate" value="Missing"/>
+                </condition>
+                <effect util="8">
+                    <set var="state" value="INFORMATION_EXTRACTION"/>
+                    <set var="a_m" value="ASK_INFO_START_DATE"/>
+
+                    <set var="update" value="null"/>
+                </effect>
+            </case>
+        </rule>
+
+        <rule id="MissingStartTimeInformation">
+            <case>
+                <condition>
+                    <if var="update" value="true"/>
+
+                    <if var="a_u" value="BOOKING"/>
+                    <if var="state" value="INFORMATION_EXTRACTION"/>
+                    <if var="startTime" value="Missing"/>
+                </condition>
+                <effect util="7">
+                    <set var="state" value="INFORMATION_EXTRACTION"/>
+                    <set var="a_m" value="ASK_INFO_START_TIME"/>
+
+                    <set var="update" value="null"/>
+                </effect>
+            </case>
+        </rule>
+
+        <rule id="EndTimeInformationUnknown">
+            <case>
+                <condition>
+                    <if var="update" value="true"/>
+
+                    <if var="a_u" value="BOOKING"/>
+                    <if var="state" value="INFORMATION_EXTRACTION"/>
+                    <if var="endTimeKnown" value="null"/>
+                </condition>
+                <effect util="6">
+                    <set var="state" value="INFORMATION_EXTRACTION"/>
+                    <set var="a_m" value="ASK_INFO_END_TIME_AND_DATE"/>
+
+                    <set var="update" value="null"/>
+                </effect>
+            </case>
+        </rule>
+
+        <rule id="MissingEndDateInformation">
+            <case>
+                <condition>
+                    <if var="update" value="true"/>
+
+                    <if var="a_u" value="BOOKING"/>
+                    <if var="state" value="INFORMATION_EXTRACTION"/>
+                    <if var="endDate" value="Missing"/>
+                    <if var="endTimeKnown" value="true"/>
+                </condition>
+                <effect util="5">
+                    <set var="state" value="INFORMATION_EXTRACTION"/>
+                    <set var="a_m" value="ASK_INFO_END_DATE"/>
+
+                    <set var="update" value="null"/>
+                </effect>
+            </case>
+        </rule>
+
+        <rule id="MissingEndTimeInformation">
+            <case>
+                <condition>
+                    <if var="update" value="true"/>
+
+                    <if var="a_u" value="BOOKING"/>
+                    <if var="state" value="INFORMATION_EXTRACTION"/>
+                    <if var="endTime" value="Missing"/>
+                    <if var="endTimeKnown" value="true"/>
+                </condition>
+                <effect util="4">
+                    <set var="state" value="INFORMATION_EXTRACTION"/>
+                    <set var="a_m" value="ASK_INFO_END_TIME"/>
+
+                    <set var="update" value="null"/>
+                </effect>
+            </case>
+        </rule>
+
+        <rule id="MissingStartSlotInformation">
+            <case>
+                <condition>
+                    <if var="update" value="true"/>
+
+                    <if var="a_u" value="BOOKING"/>
+                    <if var="state" value="INFORMATION_EXTRACTION"/>
+                    <if var="startSlot" value="Missing"/>
+                </condition>
+                <effect util="3">
+                    <set var="state" value="INFORMATION_EXTRACTION"/>
+                    <set var="a_m" value="ASK_INFO_START_SLOT"/>
+
+                    <set var="update" value="null"/>
+                </effect>
+            </case>
+        </rule>
+        <!-- Do not ask: if the user want's to given a end slot, can do that in an explicit way only
+        <rule id="MissingEndSlotInformation">
+            <case>
+                <condition>
+                    <if var="update" value="true"/>
+
+                    <if var="a_u" value="BOOKING"/>
+                    <if var="state" value="INFORMATION_EXTRACTION"/>
+                    <if var="endSlot" value="Missing"/>
+                </condition>
+                <effect util="2">
+                    <set var="state" value="INFORMATION_EXTRACTION"/>
+                    <set var="a_m" value="ASK_INFO_END_SLOT"/>
+
+                    <set var="update" value="null"/>
+                </effect>
+            </case>
+        </rule>
+        -->
+        <!-- Never needed: the value is set to 'economy' by default (or the value given by the user) -->
+        <rule id="MissingVehicleTypeInformation">
+            <case>
+                <condition>
+                    <if var="update" value="true"/>
+
+                    <if var="a_u" value="BOOKING"/>
+                    <if var="state" value="INFORMATION_EXTRACTION"/>
+                    <if var="vehicleType" value="Missing"/>
+                </condition>
+                <effect util="1">
+                    <set var="state" value="INFORMATION_EXTRACTION"/>
+                    <set var="a_m" value="ASK_INFO_VEHICLE_TYPE"/>
+
+                    <set var="update" value="null"/>
+                </effect>
+            </case>
+        </rule>
+    </model>
+
+    <model id="BookingConfirmation" trigger="u_u">
+        <rule id="Confirm">
+            <case>
+                <condition>
+                    <if var="a_u" value="BOOKING"/>
+                    <if var="state" value="INFORMATION_EXTRACTION"/>
+                    <if var="a_m" value="WAIT_CONFIRM"/>
+
+                    <!-- JUST FOR TEST: it should be 'yes' -->
+                    <if var="u_u" relation="!=" value="Missing"/>
+                </condition>
+                <effect>
+                    <if var="state" value="ELABORATE_REQUEST"/>
+                    <if var="a_m" value="SEND_REQUEST"/>
+                </effect>
+            </case>
+        </rule>
+    </model>
+
+</domain>

@@ -124,7 +124,7 @@ public class Shared {
     public static final Set<String> DEPENDANT_TIME_CASE = new HashSet<>(Arrays.asList("alle", "le"));    // "fino a domani alle 17", "entro le 14 di dopodomani"
 
     public static final Set<String> START_VERBS = new HashSet<>(Arrays.asList("partire", "prendere", "prenotare", "usare"));
-    public static final Set<String> END_VERBS = new HashSet<>(Arrays.asList("arrivare", "lasciare", "posare"));
+    public static final Set<String> LOCATION_END_VERBS = new HashSet<>(Arrays.asList("arrivare", "lasciare", "posare"));
     */
 
     public static final Set<String> ADDRESS_CLUE = new HashSet<>(Arrays.asList("corso", "piazza", "strada", "via", "viale", "vicolo"));

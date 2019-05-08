@@ -1,4 +1,4 @@
-package opendial.modules.mume;
+package opendial.modules.mumedefault;
 
 import opendial.DialogueState;
 import opendial.DialogueSystem;
@@ -6,7 +6,7 @@ import opendial.modules.Module;
 
 import java.util.Collection;
 
-import static opendial.modules.mume.config.Shared.log;
+import static opendial.modules.mumedefault.config.Shared.log;
 
 /**
  * Example of simple external module used for the flight-booking dialogue domain. The

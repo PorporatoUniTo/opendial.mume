@@ -267,6 +267,7 @@
                     <set var="endCity" value="{startCity}"/>
                     <set var="endLat" value="{startLat}"/>
                     <set var="endLon" value="{startLon}"/>
+                    <ser var="endslotUnspecified" value="{startSlotUnspecified}"/>
 
                     <!-- Go on -->
                     <set var="newInformation" value="[]"/>
@@ -277,7 +278,7 @@
                 <!--Journey type: A->B -->
                 <condition>
                     <if var="current_step" value="INFORMATION_RETRIEVAL"/>
-                    <if var="a_m" relation="in" value="ASK_END_SLOT"/>
+                    <if var="a_m" value="ASK_END_SLOT"/>
                     <if var="newInformation" relation="contains" value="UU"/>
 
                     <or>
@@ -306,7 +307,7 @@
                 <!--Journey type: A->B -->
                 <condition>
                     <if var="current_step" value="INFORMATION_RETRIEVAL"/>
-                    <if var="a_m" relation="in" value="ASK_END_SLOT"/>
+                    <if var="a_m" value="ASK_END_SLOT"/>
                     <if var="newInformation" relation="contains" value="UU"/>
 
                     <or>
@@ -334,7 +335,7 @@
             <case>
                 <condition>
                     <if var="current_step" value="INFORMATION_RETRIEVAL"/>
-                    <if var="a_m" relation="in" value="ASK_END_SLOT_MORE"/>
+                    <if var="a_m" value="ASK_END_SLOT_MORE"/>
                     <if var="newInformation" relation="contains" value="UU"/>
 
                     <if var="newInformation" relation="contains" value="Slot({X})"/>
@@ -655,7 +656,7 @@
                     <set var="startSlot" value="Missing"/>
                     <set var="sortedSlots" value="[]"/>
                     <set var="startCity" value="Missing"/>
-                    <set var="startSlotToBeDefined" value="false"/>
+                    <set var="startSlotUnspecified" value="false"/>
                     <set var="startDate" value="Missing"/>
                     <set var="startTime" value="Missing"/>
                     <set var="endSlot" value="Missing"/>

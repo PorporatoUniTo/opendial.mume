@@ -1,4 +1,4 @@
-package opendial.modules.mume;
+package opendial.modules.mumedefault;
 
 import edu.stanford.nlp.ling.CoreAnnotations;
 import edu.stanford.nlp.ling.CoreLabel;
@@ -11,7 +11,7 @@ import eu.fbk.dh.tint.runner.TintPipeline;
 import opendial.DialogueState;
 import opendial.DialogueSystem;
 import opendial.modules.Module;
-import opendial.modules.mume.information.LocationInfo;
+import opendial.modules.mumedefault.information.LocationInfo;
 
 import java.io.*;
 import java.time.ZonedDateTime;
@@ -20,8 +20,9 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
-import static opendial.modules.mume.config.Config.*;
-import static opendial.modules.mume.config.Shared.*;
+import static opendial.modules.mumedefault.config.Config.*;
+import static opendial.modules.mumedefault.config.Shared.*;
+import static opendial.modules.mumedefault.information.TimeInfo.QUARTER;
 
 /**
  * Extract journey information from the user utterances.
@@ -137,7 +138,7 @@ public class CarPoolingInformationExtraction implements Module {
             // String userUtterance = new String(userUtteranceBytes, StandardCharsets.UTF_16);
 
             // Informations
-            Map<String, String> information = new HashMap<>();
+            SortedMap<String, String> information = new TreeMap<>();
             Map<String, String> previousInformation = new HashMap<>();
             String[] infoSlots = {
                     START_DATE,
@@ -169,6 +170,7 @@ public class CarPoolingInformationExtraction implements Module {
 
             // 'Vorrei prenotare l'auto in piazza Vittorio Veneto a Pinerolo per domani dalle 14 alle sette'
             log.info("User said: '" + userUtterance + "'");
+            exampleLog.info("User's new message:\t'" + userUtterance + "'");
 
             if (userUtterance != null && !userUtterance.isEmpty()) {
                 String machinePrevState = "";
@@ -180,6 +182,7 @@ public class CarPoolingInformationExtraction implements Module {
                 ZonedDateTime now = ZonedDateTime.now();
                 userUtterance = correctUserUtterance(userUtterance, machinePrevState, now, information.getOrDefault(START_DATE, NONE));
                 log.info("Corrected user utterance: '" + userUtterance + "'");
+                exampleLog.info("Corrected message:\t'" + userUtterance + "'");
 
             /* Real cedit card needed /
             try {
@@ -479,11 +482,16 @@ public class CarPoolingInformationExtraction implements Module {
                     hasBeenUpdated = true;
 
                 log.info("Updated Information:");
+                exampleLog.info("Updated Information:");
                 information.forEach((s, v) -> {
                     log.info(s + " = " + v);
+                    exampleLog.info(((v.equals(previousInformation.getOrDefault(s, NONE))) ? "" : "\t") + s + " = " + v);
                     system.addContent(s, v);
                 });
+                exampleLog.info("\n");
                 log.info("Errors found:\t" + errors.stream().collect(Collectors.joining(",", "[", "]")));
+                if (!errors.isEmpty())
+                    exampleLog.info("Errors found:\t" + errors.stream().collect(Collectors.joining("\n\t", "\t", "\n")));
                 if (hasBeenUpdated || !errors.isEmpty())
                     if (errors.isEmpty())
                         system.addContent("update", String.valueOf(true));
@@ -725,7 +733,9 @@ public class CarPoolingInformationExtraction implements Module {
                 ((Integer.parseInt(sDate[0]) == now.getYear() &&
                         Integer.parseInt(sDate[1]) == now.getMonthValue() &&
                         Integer.parseInt(sDate[2]) == now.getDayOfMonth() &&
-                        Integer.parseInt(sTime[0]) < now.getHour()) ||
+                        (Integer.parseInt(sTime[0]) < now.getHour() ||
+                                Integer.parseInt(sTime[0]) == now.getHour() &&
+                                        Integer.parseInt(sTime[1]) < (now.getMinute() / QUARTER) * QUARTER)) ||
                         // the hour is invalid (greater than 23 or less than 0, due to the correction taking in account the start time)
                         //  (this should not happen)
                         (Integer.parseInt(sTime[0]) > 23 || Integer.parseInt(sTime[0]) < 0))) {
@@ -778,7 +788,7 @@ public class CarPoolingInformationExtraction implements Module {
                         Integer.parseInt(eDate[0]) == Integer.parseInt(sDate[0]) &&
                                 Integer.parseInt(eDate[1]) == Integer.parseInt(sDate[1]) &&
                                 Integer.parseInt(eDate[2]) == Integer.parseInt(sDate[2]) &&
-                                Integer.parseInt(eTime[0]) <= Integer.parseInt(sTime[0])) ||
+                                Integer.parseInt(eTime[0]) < Integer.parseInt(sTime[0])) ||
                 // the hour is invalid (greater than 23 or less than 0, due to the correction taking in account the start time)
                 //  (this should not happen)
                 (Integer.parseInt(eTime[0]) > 23 || Integer.parseInt(eTime[0]) < 0)) {

@@ -26,6 +26,7 @@
         <variable id="a_m">
             <value>RETRIEVE_INFORMATION</value>
         </variable>
+        <!-- IMPORTANT -->
         <variable id="a_m-prev">
             <value>ASK_INFO_START_DATE</value>
         </variable>
@@ -50,6 +51,9 @@
         </variable>
         <variable id="endDate">
             <value>Missing</value>
+        </variable>
+        <variable id="endTimeKnown">
+            <value>null</value>
         </variable>
 
         <variable id="startSlot">
@@ -136,7 +140,8 @@
     <!-- External module showing how to interface the dialogue system with an external
     database (used here to find the trip prices and "book" the car) -->
     <settings>
-        <modules>opendial.modules.mume.CarPoolingInformationExtraction,opendial.modules.mume.CarPoolingRequest</modules>
-        <!-- <modules>opendial.modules.mume.CarPoolingResponseGeneration</modules> -->
+        <modules>
+            opendial.modules.mumedefault.CarPoolingInformationExtraction,opendial.modules.mumedefault.CarPoolingRequest
+        </modules>
     </settings>
 </domain>

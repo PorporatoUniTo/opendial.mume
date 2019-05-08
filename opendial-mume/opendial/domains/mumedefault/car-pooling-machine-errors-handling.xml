@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<domain id="UserErrorsHandling">
+    <model id="ErrorCases" trigger="update">
+        <rule id="PastTimeGiven">
+            <case>
+                <condition>
+                    <if var="update" value="false"/>
+
+                    <!-- If the user is booking a car... -->
+                    <if var="a_u" value="BOOKING"/>
+                    <if var="state" value="INFORMATION_EXTRACTION"/>
+
+                    <if var="errors" relation="contains" value="PastTimeError"/>
+                </condition>
+                <effect util="9">
+                    <set var="errors" value="[]"/>
+                    <set var="update" value="null"/>
+
+                    <set var="a_m" value="{a_m-prev}"/>
+                    <set var="u_m" value="Mi spiace, data e ora non possono essere gia' passate..."/>
+                </effect>
+            </case>
+        </rule>
+    </model>
+</domain>
