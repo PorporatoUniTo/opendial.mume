@@ -28,7 +28,7 @@
         </variable>
         <!-- IMPORTANT -->
         <variable id="a_m-prev">
-            <value>ASK_INFO_START_DATE</value>
+            <value>ASK_INFO_START_SLOT_AND_DATE</value>
         </variable>
 
         <!-- JUST FOR TEST -->

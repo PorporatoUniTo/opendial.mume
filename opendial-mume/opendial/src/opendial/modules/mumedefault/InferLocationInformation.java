@@ -257,7 +257,7 @@ class InferLocationInformation {
                     */
         }
         /* Otherwise, select the nearest slots to the current position of th user if s/he indicate that wants to start from there */
-        else if (hereAnswer && !(machinePrevState.endsWith("TIME") || machinePrevState.endsWith("DATE")) && slot == null) {
+        else if (hereAnswer && machinePrevState.contains("SLOT") && slot == null) {
             // Retrive the address and the city of the current user position
             JsonObject currentUserAddress = null;
             try {

@@ -57,7 +57,7 @@ class LocationsExtractor {
 
             List<LocationInfo> cities = new ArrayList<>();
             List<LocationInfo> slots = new ArrayList<>();
-            boolean hereClue = tokens.stream().anyMatch(t -> HERE_WORDS.contains(t.originalText()));
+            boolean hereClue = false;
 
             findLocationInfo(cities, addresses, slots, tokens, dependencies, locationNERs);
 
@@ -69,7 +69,7 @@ class LocationsExtractor {
             addresses.forEach(t -> log.info(t.toString()));
             log.info("Slots:");
             slots.forEach(t -> log.info(t.toString()));
-            log.info("Here:\t" + hereClue);
+            log.info("Here:\t" + tokens.stream().anyMatch(t -> HERE_WORDS.contains(t.originalText())));
 
             boolean doneCase = false;
             boolean doneVerbs = false;
@@ -317,10 +317,8 @@ class LocationsExtractor {
             }
 
 
-            if (!machinePrevState.endsWith("TIME") && !machinePrevState.endsWith("DATE"))
-                for (CoreLabel token : tokens)
-                    if (HERE_WORDS.contains(token.originalText()))
-                        hereClue = true;
+            if (machinePrevState.contains("SLOT"))
+                hereClue = tokens.stream().anyMatch(t -> HERE_WORDS.contains(t.originalText()));
 
 
             log.info("Extracted Start City: " + newStartCity);
@@ -329,6 +327,7 @@ class LocationsExtractor {
             log.info("Extracted End Address: " + newEndAddress);
             log.info("Extracted Start Slot: " + newStartSlot);
             log.info("Extracted End Slot: " + newEndSlot);
+            log.info("Extracted Here: " + hereClue);
 
             // Infer missing information
             InferLocationInformation.inferMissingInfo(oldInformation, newStartCity, newStartAddress, newStartSlot, hereClue, true, information, machinePrevState);
@@ -414,17 +413,21 @@ class LocationsExtractor {
             if (indexToCheck.contains(token.index())) {
                 if (ADDRESS_CLUE.contains(token.originalText().toLowerCase())) {
                     IndexedWord tokenIndexedWord = dependencies.getNodeByIndexSafe(token.index());
-                    List<IndexedWord> subGraph = new ArrayList<>(Collections.singletonList(tokenIndexedWord));
+                    List<IndexedWord> subGraph = new ArrayList<>();
                     // Retrieve parent, siblings and children of the clue token, if any, ...
                     IndexedWord parent = dependencies.getParent(tokenIndexedWord);
                     if (parent != null)
-                        subGraph.add(parent);
+                        subGraph.addAll(dependencies.descendants(parent));
+                    else
+                        subGraph.addAll(dependencies.descendants(tokenIndexedWord));
+                    /*
                     Collection<IndexedWord> siblings = dependencies.getSiblings(tokenIndexedWord);
                     if (siblings != null && !siblings.isEmpty())
-                        subGraph.addAll(siblings);
+                        subGraph.addAll(siblings.stream().flatMap(s -> dependencies.descendants(s).stream()).collect(Collectors.toSet()));
                     Collection<IndexedWord> children = dependencies.getChildren(tokenIndexedWord);
                     if (children != null && !children.isEmpty())
-                        subGraph.addAll(children);
+                        subGraph.addAll(children.stream().flatMap(c -> dependencies.descendants(c).stream()).collect(Collectors.toSet()));
+                    */
                     // ... and sort them by index
                     List<IndexedWord> sortedSubGraph = subGraph.stream().sorted(Comparator.comparing(IndexedWord::index)).collect(Collectors.toList());
                     log.info("Sorted subgraph:\t" + sortedSubGraph);

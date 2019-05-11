@@ -581,6 +581,11 @@ public class CarPoolingInformationExtraction implements Module {
         correctedUtterance = correctedUtterance.replace("l'una", "le una");
 
         /*
+         * Sometimes the word "parcheggio" interfer with the resolution of the related LocationInfo, so delete it*/
+        // TODO check interferences with location recognition
+        correctedUtterance = correctedUtterance.replaceAll("l [Pp]archeggio", "");
+
+        /*
          * The user maybe has omitted the month from a date. If it is so, it should be that the user would imply the
          *  CURRENT MONTH or the month that s/he has ALREADY COMMUNICATED (or was inferred by the system).
          */
@@ -652,6 +657,13 @@ public class CarPoolingInformationExtraction implements Module {
              */
             if (!correctedUtterance.startsWith("da ") && !correctedUtterance.startsWith("dall'"))
                 correctedUtterance = "da " + correctedUtterance;
+
+
+            /* If the system asked for a slot and the user says 'adesso' (e.g. 'da dove sono adesso'),
+             * it should not be taken as 'now', so delete it to avoid misinterpretations */
+            if (machinePrevState.endsWith("SLOT"))
+                correctedUtterance = correctedUtterance.replace(" adesso", "")
+                        .replace(" ora", "");
         } /* THE END CITY IS NOT AN ESSENTIAL INFORMATION: if the user doesn't communicate it, the system doesn't ask.
             else if (machinePrevState.endsWith("END_CITY") || machinePrevState.endsWith("END_SLOT")) {
             /*
@@ -662,6 +674,12 @@ public class CarPoolingInformationExtraction implements Module {
                 correctedUtterance = "a " + correctedUtterance;
         }
         */
+        /* If the system asked for a slot and the user says 'adesso' (e.g. 'da dove sono adesso'),
+         * it should not be taken as 'now', so delete it to avoid misinterpretations */
+        else if (machinePrevState.endsWith("SLOT")) {
+            correctedUtterance = correctedUtterance.replace(" adesso", "")
+                    .replace(" ora", "");
+        }
 
         /* Tint has some problem with accented letters in the weekdays names: replace with the non-accented letter (it works fine) */
         correctedUtterance = correctedUtterance.replaceAll("luned.", "lunedi");
@@ -671,6 +689,7 @@ public class CarPoolingInformationExtraction implements Module {
         correctedUtterance = correctedUtterance.replaceAll("venerd.", "venerdi");
 
         /* The systma can handler just one sentence at one time */
+        correctedUtterance = correctedUtterance.replace("...", ".");
         String subCorrectedUtterance = correctedUtterance.substring(0, correctedUtterance.length() - 1);
         correctedUtterance = subCorrectedUtterance.replace(".", " e ").replace(";", " e ") + correctedUtterance.charAt(correctedUtterance.length() - 1);
 

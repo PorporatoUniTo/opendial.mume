@@ -146,9 +146,9 @@ public class Shared {
     // ALLE -> "dalle _ alle 18" => "Prendero' l'auto ALLE 8"
     public static final Set<String> DEPENDANT_TIME_CASE = new HashSet<>(Arrays.asList("alle", "le"));    // "fino a domani alle 17", "entro le 14 di dopodomani"
 
-    public static final Set<String> ADDRESS_CLUE = new HashSet<>(Arrays.asList("corso", "piazza", "strada", "via", "viale", "vicolo"));
+    public static final Set<String> ADDRESS_CLUE = new HashSet<>(Arrays.asList("corso", "piazza", "strada", "via", "viale", "vicolo", "ospedale", "palazzo"));
 
-    public static final Set<String> START_VERBS = new HashSet<>(Arrays.asList("essere", "iniziare", "partire", "prendere", "prenotare", "serve", "usare", "volere",
+    public static final Set<String> START_VERBS = new HashSet<>(Arrays.asList("essere", "iniziare", "partire", "prendere", "prenotare", "servire", "usare", "volere",
             // FIXME
             "prendare"));
     public static final Set<String> LOCATION_END_VERBS = new HashSet<>(Arrays.asList("andare", "arrivare", "giungere", "lasciare", "posare", "raggiungere", "fermare"));
@@ -173,9 +173,9 @@ public class Shared {
     }
     */
 
-    public static final Set<String> NOW_WORDS = new HashSet<>(Arrays.asList("adesso", "ora", "subito"));
+    public static final Set<String> NOW_WORDS = new HashSet<>(Arrays.asList("adesso", "ora", "subito", "presto"));
 
-    public static final Set<String> HERE_WORDS = new HashSet<>(Arrays.asList("qui", "qua", "sono"));
+    public static final Set<String> HERE_WORDS = new HashSet<>(Arrays.asList("qui", "qua", "sono", "vicino"));
 
     static {
         HERE_WORDS.addAll(NOW_WORDS);

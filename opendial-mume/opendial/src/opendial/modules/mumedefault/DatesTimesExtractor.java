@@ -69,8 +69,8 @@ class DatesTimesExtractor {
             List<TimeInfo> times = timeAnnotations.stream().map(a -> new TimeInfo(a, tokens, dependencies)).collect(Collectors.toList());
             List<DurationInfo> durs = durationAnnotations.stream().map(a -> new DurationInfo(a, tokens, dependencies)).collect(Collectors.toList());
             boolean nowClue = false;
-            boolean unkownEndTime = false;
-            boolean knownEndTime = false;
+            boolean unkownEndTime = !Boolean.parseBoolean(information.get("endTimeKnown"));
+            boolean knownEndTime = Boolean.parseBoolean(information.get("endTimeKnown"));
 
             log.info("Dates:\t" + dateAnnotations.toString());
             dates.forEach(d -> log.info(d.toString()));
@@ -278,11 +278,21 @@ class DatesTimesExtractor {
             }
 
 
-            /* ONLY WORK WHEN THE SYSTEM DO NOT ASK FOR END TIME AND/OR DATE
+            /* ONLY WORKS WHEN THE SYSTEM DOES NOT ASK FOR END TIME AND/OR DATE
             if (newEndTime == null && newStartTime == null && newDuration == null &&
                     times.size() == 1 && DEPENDANT_TIME_CASE.contains(times.get(0).getCaseType())) {
                 newStartTime = times.get(0);
                 times.get(0).isStart = true;
+            }
+             */
+
+            /*
+            /* The user did say something like "mi serve un'auto dopodomani", meaning that start and end date are 'dopodomani' /
+            if (newStartDate == null && newStartTime == null && newEndDate == null && newEndTime == null && dates.size() == 1) {
+                newStartDate = dates.get(0);
+                newEndDate = dates.get(0);
+                dates.get(0).isStart = true;
+                dates.get(0).isEnd = true;
             }
              */
 
@@ -580,7 +590,6 @@ class DatesTimesExtractor {
                     information.getOrDefault(START_DATE, NONE).equals(NONE))
                 information.put(END_DATE, information.getOrDefault(START_DATE, NONE));
             */
-
 
             // The user don't know when the vehicle will be available again
             if (machinePrevState.endsWith("END_TIME_AND_DATE"))

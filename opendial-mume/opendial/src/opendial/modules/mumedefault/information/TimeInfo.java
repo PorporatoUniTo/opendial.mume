@@ -105,9 +105,6 @@ public class TimeInfo {
         if (!caseFound) {
             int firstIndex = ner.get(0).index();
             /* IMPORTANT: IndexedWord.index() and TokensAnnotation's index starts from 1 */
-
-            System.out.println("ALT Case:\t(" + (firstIndex - 1) + ")\t" + dependencies.getNodeByIndexSafe(firstIndex - 1).originalText());
-
             if (firstIndex > 1 && firstIndex < dependencies.size() &&
                     CASES.contains(dependencies.getNodeByIndexSafe(firstIndex - 1).originalText())) {
                 caseFound = true;
