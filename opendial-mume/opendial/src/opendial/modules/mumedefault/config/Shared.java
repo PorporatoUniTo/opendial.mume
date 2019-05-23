@@ -124,7 +124,7 @@ public class Shared {
     public static final Set<String> STRONG_START_ADDRESS_CASE = new HashSet<>(Arrays.asList("da"));  // "da piazza Vittorio Veneto"
     public static final Set<String> WEAK_START_ADDRESS_CASE = new HashSet<>(Arrays.asList("in"));  // "in piazza Avis"
     public static final Set<String> STRONG_END_ADDRESS_CASE = new HashSet<>(Arrays.asList("a")); // "a piazza Vittorio Veneto"
-    public static final Set<String> DEPENDANT_ADDRESS_CASE = new HashSet<>(Arrays.asList("in"));   // "voglio partire da Pinerolo in piazza Avis", "Voglio arrivare A nichino in viale Segre"
+    public static final Set<String> DEPENDANT_ADDRESS_CASE = new HashSet<>(Arrays.asList("in"));   // "voglio partire da Pinerolo in piazza Avis", "Voglio la macchina di MONTANARI IN via Tripoli"
 
     public static final Set<String> STRONG_START_SLOT_CASE = new HashSet<>(Arrays.asList("da"));   // "da BERNINI"
     // DI -> "Mi serve una delle auto di SANTA GIULIA" ==> "Voglio lasciare la macchina a MATTEOTTI DI Grugliasco"
@@ -145,6 +145,9 @@ public class Shared {
     public static final Set<String> STRONG_END_TIME_CASE = new HashSet<>(Arrays.asList("fino", "a"));    // "fino alle 17" (17 -case-> fino -mwe-> alle)
     // ALLE -> "dalle _ alle 18" => "Prendero' l'auto ALLE 8"
     public static final Set<String> DEPENDANT_TIME_CASE = new HashSet<>(Arrays.asList("alle", "le"));    // "fino a domani alle 17", "entro le 14 di dopodomani"
+
+    public static final Set<String> STRONG_END_DURATION_CASE = new HashSet<>(Arrays.asList("per", "dopo"));   // "per due ore", "posarla dopo un'ora"
+    public static final Set<String> DEPENDANT_DURATION_CASE = new HashSet<>(Arrays.asList("fra", "tra"));   // "fra due ore mi serve un'auto", "poserò l'auto tra due ore"
 
     public static final Set<String> ADDRESS_CLUE = new HashSet<>(Arrays.asList("corso", "piazza", "strada", "via", "viale", "vicolo", "ospedale", "palazzo"));
 
@@ -173,7 +176,9 @@ public class Shared {
     }
     */
 
-    public static final Set<String> NOW_WORDS = new HashSet<>(Arrays.asList("adesso", "ora", "subito", "presto"));
+    public static final Set<String> NOW_WORDS = new HashSet<>(Arrays.asList("adesso", "subito", "presto"
+            // ,"ora"    FIXME 'ora' is interpreted like a duration
+    ));
 
     public static final Set<String> HERE_WORDS = new HashSet<>(Arrays.asList("qui", "qua", "sono", "vicino"));
 
@@ -273,6 +278,8 @@ public class Shared {
                     negativeCompositeAnswers.add(word + p);
             }
     }
+
+    public static final Set<String> FROM_NOW_CLUE = new HashSet<>(Arrays.asList("tra", "fra"));
 
     /* Sample vehicle type */
     public static final Map<String, List<String>> VEHICLE_TYPES = new HashMap<>();

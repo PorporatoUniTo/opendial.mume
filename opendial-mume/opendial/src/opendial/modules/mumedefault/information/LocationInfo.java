@@ -34,7 +34,7 @@ public class LocationInfo {
         // beginCharIndex = ner.get(0).beginPosition();
         // endCharIndex = ner.get(ner.size() - 1).endPosition();
 
-        governors = ner.stream().map(dependencies::getParent).collect(Collectors.toList());
+        governors = ner.stream().filter(w -> dependencies.getParent(w) != null).map(dependencies::getParent).collect(Collectors.toList());
 
         List<IndexedWord> pathToRoot = dependencies.getPathToRoot(ner.get(0));
         Iterator<IndexedWord> pathToRootIterator = pathToRoot.iterator();

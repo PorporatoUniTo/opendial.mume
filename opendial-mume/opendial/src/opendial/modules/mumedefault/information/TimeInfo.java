@@ -43,7 +43,7 @@ public class TimeInfo {
     private boolean inLetters;
     public boolean isStart;
     public boolean isEnd;
-    private TemporalModifier temporatMod;
+    private TemporalModifier temporalMod;
 
     public TimeInfo(List<IndexedWord> ner, List<CoreLabel> tokens, SemanticGraph dependencies) {
         /* IMPORTANT: IndexedWord.index() and TokensAnnotation's index starts from 1 */
@@ -122,12 +122,12 @@ public class TimeInfo {
         isStart = false;
         isEnd = false;
 
-        temporatMod = null;
-        for (int i = 0; i < TemporalModifier.values().length && temporatMod == null; i++) {
+        temporalMod = null;
+        for (int i = 0; i < TemporalModifier.values().length && temporalMod == null; i++) {
             TemporalModifier mod = TemporalModifier.values()[i];
             for (IndexedWord child : dependencies.getChildren(ner.get(0))) {
                 if (mod.texts.contains(child.originalText()))
-                    temporatMod = mod;
+                    temporalMod = mod;
             }
         }
     }
@@ -193,11 +193,11 @@ public class TimeInfo {
     }
 
     public boolean hasMorningSpecification() {
-        return temporatMod != null && temporatMod.equals(TemporalModifier.MORNING);
+        return temporalMod != null && temporalMod.equals(TemporalModifier.MORNING);
     }
 
     public boolean hasEveningSpecification() {
-        return temporatMod != null && temporatMod.equals(TemporalModifier.EVENING);
+        return temporalMod != null && temporalMod.equals(TemporalModifier.EVENING);
     }
 
     public void roundToPreviousQuarter() {

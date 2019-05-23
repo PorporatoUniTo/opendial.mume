@@ -170,13 +170,15 @@ class LocationsExtractor {
                         if (address.getCaseType() != null && DEPENDANT_ADDRESS_CASE.contains(address.getCaseType())) {
                             /* "... da Pinerolo in piazza Avis..." */
                             if (newStartAddress == null && !address.isEnd &&
-                                    newStartCity != null && newStartCity.isGovernorOf(address)) {
+                                    (newStartCity != null && newStartCity.isGovernorOf(address) ||
+                                            newStartSlot != null && newStartSlot.isGovernorOf(address))) {
                                 newStartAddress = address;
                                 address.isStart = true;
                             }
                             /* "... fino a Nichelino in via del Castello..." */
                             if (newEndAddress == null &&
-                                    newEndCity != null && newEndCity.isGovernorOf(address)) {
+                                    (newEndCity != null && newEndCity.isGovernorOf(address) ||
+                                            newEndSlot != null && newEndSlot.isGovernorOf(address))) {
                                 newEndAddress = address;
                                 address.isEnd = true;
                             }
@@ -198,15 +200,15 @@ class LocationsExtractor {
                         } else if (slot.getCaseType() != null && DEPENDANT_SLOT_CASE.contains(slot.getCaseType())) {
                             /* "... da Torino a BERNINI..." */
                             if (newStartSlot == null &&
-                                    (newStartAddress != null && newStartAddress.isGovernorOf(slot)) ||
-                                    (newStartCity != null && newStartCity.isGovernorOf(slot))) {
+                                    (newStartAddress != null && newStartAddress.isGovernorOf(slot) ||
+                                            newStartCity != null && newStartCity.isGovernorOf(slot))) {
                                 newStartSlot = slot;
                                 slot.isStart = true;
                             }
                             /* "... a Torino a TORTONA..." */
                             if (newEndSlot == null &&
-                                    (newEndAddress != null && newEndAddress.isGovernorOf(slot)) ||
-                                    (newEndCity != null && newEndSlot.isGovernorOf(slot))) {
+                                    (newEndAddress != null && newEndAddress.isGovernorOf(slot) ||
+                                            newEndCity != null && newEndSlot.isGovernorOf(slot))) {
                                 newEndSlot = slot;
                                 slot.isEnd = true;
                             }
@@ -454,7 +456,8 @@ class LocationsExtractor {
                     stop = false;
                     while (tokensIterator.hasNext() && !stop) {
                         currentToken = tokensIterator.next();
-                        if (currentToken.index() == currentIndex + 1) {
+                        if (currentToken.index() == currentIndex + 1 &&
+                                !currentToken.originalText().equals("e")) {
                             address.add(currentToken);
                             currentIndex++;
                         } else

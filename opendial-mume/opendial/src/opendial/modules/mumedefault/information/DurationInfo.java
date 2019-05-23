@@ -13,6 +13,7 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
+import static opendial.modules.mumedefault.config.Shared.log;
 import static opendial.modules.mumedefault.information.DateInfo.YEAR_MONTH_NUMBER;
 import static opendial.modules.mumedefault.information.TimeInfo.*;
 
@@ -34,9 +35,13 @@ public class DurationInfo {
     private List<IndexedWord> governors;
     private IndexedWord firstVerbGovernorWord;
     // private CoreLabel firstVerbGovernorToken;
-    /* A duration is always end */
-    // public boolean isStart;
-    // public boolean isEnd;
+    public boolean isStart;
+    public boolean isEnd;
+    /* From now or from start (i.e. has 'dopo' specification) */
+    private boolean after;
+
+    private DurationInfo() {
+    }
 
     public DurationInfo(List<IndexedWord> ner, List<CoreLabel> tokens, SemanticGraph dependencies) {
         years = 0;
@@ -137,6 +142,38 @@ public class DurationInfo {
             }
         }
         if (!caseFound) caseType = "";
+
+        isStart = false;
+        isEnd = false;
+
+        after = ner.stream().flatMap(w -> dependencies.getChildren(w).stream()).anyMatch(w -> w.originalText().matches("[Dd]opo")) ||
+                ner.stream().filter(w -> dependencies.getParent(w) != null).map(w -> dependencies.getParent(w)).anyMatch(w -> w.originalText().matches("[Dd]opo"));
+    }
+
+    public static void split(DurationInfo duration, List<DurationInfo> timeDurations, List<DurationInfo> dateDurations) {
+        DurationInfo newTimeDur = new DurationInfo();
+        DurationInfo newDateDur = new DurationInfo();
+        newDateDur.years = duration.years;
+        newDateDur.months = duration.months;
+        newDateDur.days = duration.days;
+        newTimeDur.hours = duration.hours;
+        newTimeDur.minutes = duration.minutes;
+
+        newTimeDur.wordList = duration.wordList;
+        newDateDur.wordList = duration.wordList;
+        newTimeDur.governors = duration.governors;
+        newDateDur.governors = duration.governors;
+        newTimeDur.firstVerbGovernorWord = duration.firstVerbGovernorWord;
+        newDateDur.firstVerbGovernorWord = duration.firstVerbGovernorWord;
+        newTimeDur.isStart = duration.isStart;
+        newDateDur.isStart = duration.isStart;
+        newTimeDur.isEnd = duration.isEnd;
+        newDateDur.isEnd = duration.isEnd;
+        newTimeDur.after = duration.after;
+        newDateDur.after = duration.after;
+
+        timeDurations.add(newTimeDur);
+        dateDurations.add(newDateDur);
     }
 
     public double getYears() {
@@ -159,15 +196,15 @@ public class DurationInfo {
         return minutes;
     }
 
-    List<IndexedWord> getWordList() {
+    public List<IndexedWord> getWordList() {
         return wordList;
     }
 
-    String getCaseType() {
+    public String getCaseType() {
         return caseType;
     }
 
-    List<IndexedWord> getGovernors() {
+    public List<IndexedWord> getGovernors() {
         return governors;
     }
 
@@ -177,7 +214,15 @@ public class DurationInfo {
         return "";
     }
 
-    public String toEnd(String startTime, String startDate) {
+    public IndexedWord getFirstVerbGovernorWord() {
+        return firstVerbGovernorWord;
+    }
+
+    public boolean hasAfterSpecification() {
+        return after;
+    }
+
+    public String toDateAndTime(String startTime, String startDate) {
         String[] timeFields = startTime.split(":");
         int[] newTimeFields = new int[2];
         for (int i = 0; i < timeFields.length; i++)
@@ -193,33 +238,80 @@ public class DurationInfo {
         }
         newTimeFields[0] += hours;
         if (newTimeFields[0] > HOUR_DAY) {
-            dateFields[2] += newTimeFields[0] / HOUR_DAY;
+            newDateFields[2] += newTimeFields[0] / HOUR_DAY;
             newTimeFields[0] = newTimeFields[0] % HOUR_DAY;
         }
         newDateFields[2] += days;
-        int initialMonthDay = DateInfo.getMonthDaysNumber(newDateFields[1]);
-        if (newDateFields[2] > initialMonthDay) {
-            /* FIXME: works only for increments that do not execeed the next month */
-            newDateFields[1] += newDateFields[2] / initialMonthDay;
-            newDateFields[2] = newDateFields[2] % initialMonthDay;
+        int monthDay = DateInfo.getMonthDaysNumber(newDateFields[1]);
+        while (newDateFields[2] > monthDay) {
+            newDateFields[1]++;
+            newDateFields[2] -= monthDay;
+            monthDay = DateInfo.getMonthDaysNumber(newDateFields[1]);
         }
         newDateFields[1] += months;
         if (newDateFields[1] > YEAR_MONTH_NUMBER) {
-            newDateFields[2] += newDateFields[1] / YEAR_MONTH_NUMBER;
+            newDateFields[0] += newDateFields[1] / YEAR_MONTH_NUMBER;
             newDateFields[1] = newDateFields[1] % YEAR_MONTH_NUMBER;
         }
         newDateFields[0] += years;
-        return String.format("%04d-%02d-%02d" + DURATIONS_SEPARATOR + "%02d:%02d", newDateFields[0], newDateFields[1], newDateFields[2], newTimeFields[0], newTimeFields[1]);
+
+        log.warning(String.format("%02d:%02d" + DURATIONS_SEPARATOR + "%04d-%02d-%02d", newTimeFields[0], newTimeFields[1], newDateFields[0], newDateFields[1], newDateFields[2]));
+
+        return String.format("%02d:%02d" + DURATIONS_SEPARATOR + "%04d-%02d-%02d", newTimeFields[0], newTimeFields[1], newDateFields[0], newDateFields[1], newDateFields[2]);
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (!(o instanceof DurationInfo)) return false;
+
+        DurationInfo that = (DurationInfo) o;
+
+        if (Double.compare(that.getYears(), getYears()) != 0) return false;
+        if (Double.compare(that.getMonths(), getMonths()) != 0) return false;
+        if (Double.compare(that.getDays(), getDays()) != 0) return false;
+        if (Double.compare(that.getHours(), getHours()) != 0) return false;
+        if (Double.compare(that.getMinutes(), getMinutes()) != 0) return false;
+        return wordList.equals(that.wordList);
+
+    }
+
+    @Override
+    public int hashCode() {
+        int result;
+        long temp;
+        temp = Double.doubleToLongBits(getYears());
+        result = (int) (temp ^ (temp >>> 32));
+        temp = Double.doubleToLongBits(getMonths());
+        result = 31 * result + (int) (temp ^ (temp >>> 32));
+        temp = Double.doubleToLongBits(getDays());
+        result = 31 * result + (int) (temp ^ (temp >>> 32));
+        temp = Double.doubleToLongBits(getHours());
+        result = 31 * result + (int) (temp ^ (temp >>> 32));
+        temp = Double.doubleToLongBits(getMinutes());
+        result = 31 * result + (int) (temp ^ (temp >>> 32));
+        result = 31 * result + (getWordList() != null ? getWordList().hashCode() : 0);
+        result = 31 * result + (getCaseType() != null ? getCaseType().hashCode() : 0);
+        result = 31 * result + (getGovernors() != null ? getGovernors().hashCode() : 0);
+        result = 31 * result + (getFirstVerbGovernorWord() != null ? getFirstVerbGovernorWord().hashCode() : 0);
+        return result;
     }
 
     @Override
     public String toString() {
         return "DurationInfo{" +
-                "years=" + years +
+                "{years=" + years +
                 ", months=" + months +
                 ", days=" + days +
                 ", hours=" + hours +
-                ", minutes=" + minutes +
+                ", minutes=" + minutes + "}" +
+                ", wordList=" + wordList +
+                ", caseType='" + caseType + '\'' +
+                ", governors=" + governors +
+                ", firstVerbGovernorWord=" + firstVerbGovernorWord +
+                ", isStart=" + isStart +
+                ", isEnd=" + isEnd +
+                ", after=" + after +
                 '}';
     }
 }

@@ -459,6 +459,10 @@ public class CarPoolingInformationExtraction implements Module {
                         information.put(END_SLOT, information.getOrDefault(START_SLOT, NONE));
                     if (information.getOrDefault(END_CITY, NONE).equals(NONE))
                         information.put(END_CITY, information.getOrDefault(START_CITY, NONE));
+                    if (information.getOrDefault(END_LAT, NONE).equals(NONE))
+                        information.put(END_LAT, information.getOrDefault(START_LAT, NONE));
+                    if (information.getOrDefault(END_LON, NONE).equals(NONE))
+                        information.put(END_LON, information.getOrDefault(START_LON, NONE));
                 }
 
 
@@ -476,7 +480,7 @@ public class CarPoolingInformationExtraction implements Module {
 
                 boolean hasBeenUpdated = false;
                 for (Map.Entry<String, String> info : information.entrySet())
-                    if (info.getValue().equals(previousInformation.get(info.getKey())))
+                    if (!info.getValue().equals(previousInformation.get(info.getKey())))
                         hasBeenUpdated = true;
                 if (!hasBeenUpdated && !errors.isEmpty())
                     hasBeenUpdated = true;
@@ -655,8 +659,9 @@ public class CarPoolingInformationExtraction implements Module {
              * If the user is answering to a question like "Da dove vuoi partire", the utternace should contain the
              *  preposition "da" (e.g.: Da dove vuoi partire? Da Pinerolo)
              */
-            if (!correctedUtterance.startsWith("da ") && !correctedUtterance.startsWith("dall'"))
-                correctedUtterance = "da " + correctedUtterance;
+            if (!correctedUtterance.startsWith("da ") && !correctedUtterance.startsWith("Da ") &&
+                    !correctedUtterance.startsWith("dall'") && !correctedUtterance.startsWith("Dall'"))
+                correctedUtterance = "Da " + correctedUtterance;
 
 
             /* If the system asked for a slot and the user says 'adesso' (e.g. 'da dove sono adesso'),
@@ -807,7 +812,9 @@ public class CarPoolingInformationExtraction implements Module {
                         Integer.parseInt(eDate[0]) == Integer.parseInt(sDate[0]) &&
                                 Integer.parseInt(eDate[1]) == Integer.parseInt(sDate[1]) &&
                                 Integer.parseInt(eDate[2]) == Integer.parseInt(sDate[2]) &&
-                                Integer.parseInt(eTime[0]) < Integer.parseInt(sTime[0])) ||
+                                (Integer.parseInt(eTime[0]) < Integer.parseInt(sTime[0]) ||
+                                        Integer.parseInt(eTime[0]) == Integer.parseInt(sTime[0]) &&
+                                                Integer.parseInt(eTime[1]) < Integer.parseInt(sTime[1]))) ||
                 // the hour is invalid (greater than 23 or less than 0, due to the correction taking in account the start time)
                 //  (this should not happen)
                 (Integer.parseInt(eTime[0]) > 23 || Integer.parseInt(eTime[0]) < 0)) {
