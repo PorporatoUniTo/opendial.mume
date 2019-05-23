@@ -1,6 +1,6 @@
 # opendial.mume
 
-1. Installare [TreeTagger]("http://www.cis.uni-muenchen.de/~schmid/tools/TreeTagger/") (vedere cartella opendial-mume/treetagger).
+1. Installare [TreeTagger](http://www.cis.uni-muenchen.de/~schmid/tools/TreeTagger/) (vedere cartella opendial-mume/treetagger).
 2. Dalla cartella opendial-mume/opendial-mume/opendial, eseguire <code>gradle compile</code>. Questo installa tutte le dipendenza e la prima volta potrebbe volerci un po'.
 3. Modificare il file configs/default-config.properties impostando la variabile <code>timex.treeTaggerHome</code> alla cartella dell'installazione di TreeTagger (<a href="https://github.com/HeidelTime/heideltime/wiki/TreeTaggerWrapper">forse questo può aiutare</a>)
 4. Dalla stessa cartella, lanciare OpenDial con <code>./scripts/opendial</code> (<code>./scripts/opendial.bat</code> su un sistema Windows) con le seguenti opzioni:
