@@ -23,6 +23,7 @@ public class Shared {
     private static final String CITY = "City";
     public static final String START_TIME = START + TIME;
     public static final String END_TIME = END + TIME;
+    public static final String END_TIME_KNOWN = END_TIME + "Known";
     public static final String START_DATE = START + DATE;
     public static final String END_DATE = END + DATE;
     public static final String START_SLOT = START + SLOT;
@@ -176,7 +177,7 @@ public class Shared {
     }
     */
 
-    public static final Set<String> NOW_WORDS = new HashSet<>(Arrays.asList("adesso", "subito", "presto"
+    public static final Set<String> NOW_WORDS = new HashSet<>(Arrays.asList("adesso", "subito", "presto", "immediatamente", "immantinente", "stante"    // "seduta stante"
             // ,"ora"    FIXME 'ora' is interpreted like a duration
     ));
 
@@ -256,7 +257,7 @@ public class Shared {
             }
     }
 
-    private static final Set<String> NEGATIVE_COMPOSITE_ANSWERS = new HashSet<>(Arrays.asList("non lo so", "non importa", "non mi importa"));
+    private static final Set<String> NEGATIVE_COMPOSITE_ANSWERS = new HashSet<>(Arrays.asList("non lo so", "non so", "non saprei", "non importa", "non mi importa"));
     public static List<String> negativeCompositeAnswers = new ArrayList<>();
 
     static {
@@ -291,9 +292,9 @@ public class Shared {
      *  - transport (da trasporto)
      */
     static {
-        VEHICLE_TYPES.put("economy", new ArrayList<>(Arrays.asList("economy", "economica", "economico")));
-        VEHICLE_TYPES.put("luxury", new ArrayList<>(Arrays.asList("luxury", "di lusso")));
-        VEHICLE_TYPES.put("transport", new ArrayList<>(Arrays.asList("transport", "da trasporto", "il trasporto", "van")));
+        // VEHICLE_TYPES.put("economy", new ArrayList<>(Arrays.asList("economy", "economica", "economico")));   // DEFAULT
+        VEHICLE_TYPES.put("luxury", new ArrayList<>(Arrays.asList("luxury", "di lusso", "lussuosa")));
+        VEHICLE_TYPES.put("transport", new ArrayList<>(Arrays.asList("transport", "da trasporto", "il trasporto", "van", "furgone", "furgoncino", "trasloco")));
     }
 
     // loggers

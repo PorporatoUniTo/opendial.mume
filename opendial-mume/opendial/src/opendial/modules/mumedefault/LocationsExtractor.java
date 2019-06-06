@@ -319,8 +319,17 @@ class LocationsExtractor {
             }
 
 
-            if (machinePrevState.contains("SLOT"))
+            // Here clue (e.g.: "da qui", "più vicino", ...)
+            if (machinePrevState.contains("SLOT")) {
                 hereClue = tokens.stream().anyMatch(t -> HERE_WORDS.contains(t.originalText()));
+                /*
+                if (!hereClue) {
+                    String userUtt = annotatedUserUtterance.get(CoreAnnotations.TextAnnotation.class);
+                    if (userUtt.matches("vicino(?! a )"))
+                        hereClue = true;
+                }
+                */
+            }
 
 
             log.info("Extracted Start City: " + newStartCity);

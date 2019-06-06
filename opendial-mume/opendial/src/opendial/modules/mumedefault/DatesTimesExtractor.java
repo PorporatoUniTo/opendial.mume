@@ -426,7 +426,7 @@ class DatesTimesExtractor {
             }
 
 
-            if (machinePrevState.endsWith("END_TIME_AND_DATE")) {
+            if (machinePrevState.endsWith("END_TIME_AND_DATE") || machinePrevState.endsWith("END_TIME")) {
                 for (CoreLabel token : annotatedUserUtterance.get(CoreAnnotations.TokensAnnotation.class))
                     // Check for 'no' answer
                     if (negativeAnswers.contains(token.originalText())) {
@@ -568,9 +568,6 @@ class DatesTimesExtractor {
                     }
                     date = String.format("%04d-%02d-%02d", newYear, newMonth, newDayOfMonth);
                 }
-
-                log.warning("END DATE:\t" + date);
-
                 information.put(END_DATE, date);
             }
             /* THIS VERSION OF THE SYSTEM ASKS FOR IT
@@ -713,11 +710,16 @@ class DatesTimesExtractor {
             // The user don't know when the vehicle will be available again
             if (machinePrevState.endsWith("END_TIME_AND_DATE"))
                 if (unkownEndTime)
-                    information.put("endTimeKnown", String.valueOf(false));
+                    information.put(END_TIME_KNOWN, String.valueOf(false));
                 else if (knownEndTime)
-                    information.put("endTimeKnown", String.valueOf(true));
-            if (!information.getOrDefault(END_TIME, NONE).equals(NONE) || !information.getOrDefault(END_DATE, NONE).equals(NONE))
-                information.put("endTimeKnown", String.valueOf(true));
+                    information.put(END_TIME_KNOWN, String.valueOf(true));
+            if (!information.getOrDefault(END_TIME, NONE).equals(NONE) /* || !information.getOrDefault(END_DATE, NONE).equals(NONE) */)
+                information.put(END_TIME_KNOWN, String.valueOf(true));
+
+            if (information.getOrDefault(END_TIME_KNOWN, "null").equals(String.valueOf(false))) {
+                information.put(END_DATE, NONE);
+                information.put(END_TIME, NONE);
+            }
 
         } catch (NullPointerException exception) {
             exception.printStackTrace();
