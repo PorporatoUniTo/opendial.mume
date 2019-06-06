@@ -85,9 +85,6 @@ dependencies {
 
     compile 'eu.fbk.dh:tint-runner:0.2'
     compile 'eu.fbk.dh:tint-geoloc-annotator:0.1'
-
-    compile group: 'org.languagetool', name: 'language-it', version: '4.5'
-
 }
 
 
