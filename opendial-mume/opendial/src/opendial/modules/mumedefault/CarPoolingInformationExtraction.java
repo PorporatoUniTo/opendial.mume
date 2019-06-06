@@ -497,6 +497,9 @@ public class CarPoolingInformationExtraction implements Module {
                         hasBeenUpdated = true;
                 if (!hasBeenUpdated && !errors.isEmpty())
                     hasBeenUpdated = true;
+                // To continue the dialog with an empty utternace, symulate the update
+                if (!hasBeenUpdated && userUtterance.isEmpty())
+                    hasBeenUpdated = true;
 
 
                 if (hasBeenUpdated)
@@ -506,7 +509,8 @@ public class CarPoolingInformationExtraction implements Module {
                         system.addContent("errors", errors.stream().collect(Collectors.joining(",", "[", "]")));
                         system.addContent("update", String.valueOf(false));
                     }
-            }
+            } else
+                system.addContent("update", String.valueOf(true));
         }
     }
 
@@ -576,6 +580,9 @@ public class CarPoolingInformationExtraction implements Module {
      * @param startDate         the String with the modified user utterance ready for parsing
      */
     private String correctUserUtterance(String originalUtterance, String machinePrevState, ZonedDateTime now, String startDate, String endDate) {
+        if (originalUtterance.isEmpty())
+            return originalUtterance;
+
         String correctedUtterance = originalUtterance;
         // NO correctedUtterance = correctedUtterance.toLowerCase();
 
@@ -827,9 +834,7 @@ public class CarPoolingInformationExtraction implements Module {
                         Integer.parseInt(eDate[0]) == Integer.parseInt(sDate[0]) &&
                                 Integer.parseInt(eDate[1]) == Integer.parseInt(sDate[1]) &&
                                 Integer.parseInt(eDate[2]) == Integer.parseInt(sDate[2]) &&
-                                (Integer.parseInt(eTime[0]) < Integer.parseInt(sTime[0]) ||
-                                        Integer.parseInt(eTime[0]) == Integer.parseInt(sTime[0]) &&
-                                                Integer.parseInt(eTime[1]) < Integer.parseInt(sTime[1]))) ||
+                                Integer.parseInt(eTime[0]) <= Integer.parseInt(sTime[0])) ||
                 // the hour is invalid (greater than 23 or less than 0, due to the correction taking in account the start time)
                 //  (this should not happen)
                 eTime.length > 1 && (Integer.parseInt(eTime[0]) > 23 || Integer.parseInt(eTime[0]) < 0)) {
