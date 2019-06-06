@@ -318,17 +318,13 @@ class LocationsExtractor {
                 cities.get(0).isStart = true;
             }
 
-
             // Here clue (e.g.: "da qui", "più vicino", ...)
             if (machinePrevState.contains("SLOT")) {
                 hereClue = tokens.stream().anyMatch(t -> HERE_WORDS.contains(t.originalText()));
-                /*
-                if (!hereClue) {
-                    String userUtt = annotatedUserUtterance.get(CoreAnnotations.TextAnnotation.class);
-                    if (userUtt.matches("vicino(?! a )"))
-                        hereClue = true;
-                }
-                */
+                if (!hereClue && newStartAddress == null && newStartCity == null && newStartSlot == null
+                    // && newEndAddress == null && newEndCity == null && newEndSlot == null
+                )
+                    hereClue = tokens.stream().anyMatch(t -> NOW_WORDS.contains(t.originalText()));
             }
 
 

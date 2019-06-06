@@ -183,9 +183,11 @@ public class Shared {
 
     public static final Set<String> HERE_WORDS = new HashSet<>(Arrays.asList("qui", "qua", "sono", "vicino"));
 
+    /* Two steps check
     static {
         HERE_WORDS.addAll(NOW_WORDS);
     }
+    */
 
     /*
     public static Set<String> hereAnswers = new HashSet<>();

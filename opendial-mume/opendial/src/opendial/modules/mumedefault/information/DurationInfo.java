@@ -237,7 +237,7 @@ public class DurationInfo {
             newTimeFields[1] = newTimeFields[1] % HOUR;
         }
         newTimeFields[0] += hours;
-        if (newTimeFields[0] > HOUR_DAY) {
+        if (newTimeFields[0] >= HOUR_DAY) {
             newDateFields[2] += newTimeFields[0] / HOUR_DAY;
             newTimeFields[0] = newTimeFields[0] % HOUR_DAY;
         }
