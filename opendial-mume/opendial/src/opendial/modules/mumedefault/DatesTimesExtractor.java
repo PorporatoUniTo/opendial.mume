@@ -514,9 +514,9 @@ class DatesTimesExtractor {
                     int newYear = Integer.parseInt(newStartDateFields[0]);
                     int newMonth = Integer.parseInt(newStartDateFields[1]);
                     int newDayOfMonth = Integer.parseInt(newStartDateFields[2]);
-                    if (newYear <= now.getYear() &&
-                            newMonth <= now.getMonthValue() &&
-                            newDayOfMonth <= now.getDayOfMonth()) {
+                    if (newYear < now.getYear() ||
+                            (newYear == now.getYear() && newMonth < now.getMonthValue()) ||
+                            (newYear == now.getYear() && newMonth == now.getMonthValue() && newDayOfMonth <= now.getDayOfMonth())) {
                         newStartDate.addOneWeek();
                         newStartDateFields = newStartDate.getDate().split("-");
                         newYear = Integer.parseInt(newStartDateFields[0]);
@@ -557,9 +557,9 @@ class DatesTimesExtractor {
                     int newYear = Integer.parseInt(newEndDateFields[0]);
                     int newMonth = Integer.parseInt(newEndDateFields[1]);
                     int newDayOfMonth = Integer.parseInt(newEndDateFields[2]);
-                    if (newYear <= Integer.parseInt(startDateFields[0]) &&
-                            newMonth <= Integer.parseInt(startDateFields[0]) &&
-                            newDayOfMonth <= Integer.parseInt(startDateFields[0])) {
+                    if (newYear < Integer.parseInt(startDateFields[0]) ||
+                            (newYear == Integer.parseInt(startDateFields[0]) && newMonth < Integer.parseInt(startDateFields[0])) ||
+                            (newYear == Integer.parseInt(startDateFields[0]) && newMonth == Integer.parseInt(startDateFields[0]) && newDayOfMonth < Integer.parseInt(startDateFields[0]))) {
                         newEndDate.addOneWeek();
                         newEndDateFields = newEndDate.getDate().split("-");
                         newYear = Integer.parseInt(newEndDateFields[0]);

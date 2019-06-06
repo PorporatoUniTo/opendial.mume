@@ -1,7 +1,7 @@
 opendial-mume/opendial/build/
 opendial-mume/opendial/.gradle
 
-opendial-mume/opendial/configs/google-api.properties
+opendial-mume/opendial/configs/
 
 # Ignore Gradle GUI config
 gradle-app.setting

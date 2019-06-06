@@ -630,7 +630,7 @@ public class CarPoolingInformationExtraction implements Module {
             }
              */
             Pattern monthDayPattern = Pattern.compile(
-                    "([Ii]l|[Dd]al|[Aa]l) (\\d{1,2})(?! \\d? ([Gg]ennaio|[Ff]ebbraio|[Mm]arzo|[Aa]prile|[Mm]aggio|[Gg]iugno|[Ll]uglio|[Aa]gosto|[Ss]ettembre|[Oo]ttobre|[Nn]ovembre|[Dd]icembre))"
+                    "([Ii]l|[Dd]al|[Aa]l|[Dd]el) (\\d{1,2})(?!\\d? ([Gg]ennaio|[Ff]ebbraio|[Mm]arzo|[Aa]prile|[Mm]aggio|[Gg]iugno|[Ll]uglio|[Aa]gosto|[Ss]ettembre|[Oo]ttobre|[Nn]ovembre|[Dd]icembre))"
             );
             Matcher monthDayMatcher = monthDayPattern.matcher(correctedUtterance);
             String monthName = "";
