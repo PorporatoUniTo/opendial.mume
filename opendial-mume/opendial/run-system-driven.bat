@@ -1,1 +1,1 @@
-.\scripts\opendial.bat -Dfile.encoding=UTF8 -Dgui=false -Ddomain=.\domains\mumesystemdriven\car-pooling-system-driven.xml
+.\scripts\opendial.bat -Dfile.encoding=UTF8 -Dgui=false -Ddomain=.\domains\mumesystemdriven\car-pooling.xml
