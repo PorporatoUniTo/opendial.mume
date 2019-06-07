@@ -1,6 +1,7 @@
 opendial-mume/opendial/build/
 opendial-mume/opendial/.gradle
-
+opendial-mume/opendial/lib/
+opendial-mume/opendial/scripts/
 opendial-mume/opendial/configs/
 
 # Ignore Gradle GUI config
