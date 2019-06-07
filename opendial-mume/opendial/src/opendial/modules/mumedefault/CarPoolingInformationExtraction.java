@@ -834,7 +834,9 @@ public class CarPoolingInformationExtraction implements Module {
                         Integer.parseInt(eDate[0]) == Integer.parseInt(sDate[0]) &&
                                 Integer.parseInt(eDate[1]) == Integer.parseInt(sDate[1]) &&
                                 Integer.parseInt(eDate[2]) == Integer.parseInt(sDate[2]) &&
-                                Integer.parseInt(eTime[0]) <= Integer.parseInt(sTime[0])) ||
+                                (Integer.parseInt(eTime[0]) < Integer.parseInt(sTime[0]) ||
+                                        Integer.parseInt(eTime[0]) == Integer.parseInt(sTime[0]) + 1 &&
+                                                Integer.parseInt(eTime[1]) < Integer.parseInt(sDate[1]))) ||
                 // the hour is invalid (greater than 23 or less than 0, due to the correction taking in account the start time)
                 //  (this should not happen)
                 eTime.length > 1 && (Integer.parseInt(eTime[0]) > 23 || Integer.parseInt(eTime[0]) < 0)) {
