@@ -1,4 +1,5 @@
 @if "%DEBUG%" == "" @echo off
+set JAVA_OPTS=%* 
 @rem ##########################################################################
 @rem
 @rem  opendial startup script for Windows

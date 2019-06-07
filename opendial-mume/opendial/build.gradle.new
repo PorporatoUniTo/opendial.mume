@@ -63,8 +63,8 @@ dependencies {
     compile group: 'org.jfree', name: 'jfreechart', version: '1.0.19+'
     compile group: 'net.sf.jung', name: 'jung-graph-impl', version: '2.0.1'
     compile group: 'net.sf.jung', name: 'jung-visualization', version: '2.0.1'
-//// 	compile group: 'de.dfki.mary', name: 'marytts-runtime', version: '5.2-beta2'
-//// 	compile group: 'de.dfki.mary', name: 'voice-cmu-slt-hsmm', version: '5.2-beta2'
+////  compile group: 'de.dfki.mary', name: 'marytts-runtime', version: '5.2-beta2'
+////  compile group: 'de.dfki.mary', name: 'voice-cmu-slt-hsmm', version: '5.2-beta2'
 //  compile group: 'org.apache.commons', name: 'commons-math3', version: '3.2'
 //  compile group: 'edu.cmu.sphinx', name: 'sphinx4-core', version:'5prealpha-SNAPSHOT'
 //  compile group: 'edu.cmu.sphinx', name: 'sphinx4-data', version:'5prealpha-SNAPSHOT'
@@ -85,7 +85,6 @@ dependencies {
 
     compile 'eu.fbk.dh:tint-runner:0.2'
     compile 'eu.fbk.dh:tint-geoloc-annotator:0.1'
-
 }
 
 
@@ -134,21 +133,25 @@ task compile(type: Copy) {
     }
 }
 
-
 /**
  * Making sure the JVM arguments are passed in the script
  */
 startScripts {
+    // This should resolve the input-line-is-too-long problem
     doLast {
-        // This should resolve the input-line-is-too-long problem
         def winScriptFile = file getWindowsScript()
         def winFileText = winScriptFile.text
         winFileText = winFileText.replaceAll('set CLASSPATH=.*', 'rem original CLASSPATH declaration replaced by:\nset CLASSPATH=%APP_HOME%\\\\lib\\\\\\*')
         winScriptFile.text = winFileText
 
         unixScript.text = unixScript.text.replaceFirst("\n", "\nJAVA_OPTS=\"\\\$@\"\n")
-        windowsScript.text = windowsScript.text.replaceFirst("\n", "\nset JAVA_OPTS=%* \n")
+
     }
+
+//    doLast {
+//        unixScript.text = unixScript.text.replaceFirst("\n", "\nJAVA_OPTS=\"\\\$@\"\n")
+//        windowsScript.text = windowsScript.text.replaceFirst("\n", "\nset JAVA_OPTS=%* \n")
+//    }
 }
 
 
