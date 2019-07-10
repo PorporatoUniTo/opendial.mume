@@ -370,7 +370,8 @@ public class CarPoolingInformationExtraction implements Module {
             if (machineIntent.contains("TIME")) {
                 String date = "";
                 String time = "";
-                if (timeAnnotations.size() == 1) {
+                if (timeAnnotations.size() == 1 &&
+                        tokens.get(timeAnnotations.get(0).get(0).index() - 1).get(CoreAnnotations.NormalizedNamedEntityTagAnnotation.class).split("T")[1].matches("\\d{1,2}(:\\d\\d)?")) {
                     if (dateAnnotations.size() == 1) {
                         String currentDate = dateAnnotations.get(0).get(0).get(CoreAnnotations.NormalizedNamedEntityTagAnnotation.class).split("T")[0];
                         if (!currentDate.equals("XXXX-XX-XX"))
@@ -1168,7 +1169,7 @@ public class CarPoolingInformationExtraction implements Module {
         correctedUtterance = subCorrectedUtterance.replace(".", " e ").replace(";", " e ") + correctedUtterance.charAt(correctedUtterance.length() - 1);
 
         /* Tint has some problem with the hou format \d\d:\d\d */
-        correctedUtterance = correctedUtterance.replaceAll("(\\d{1,2}):(\\d\\d)", "$1 e $2");
+        correctedUtterance = correctedUtterance.replaceAll("(\\d{1,2})[:,.](\\d\\d)", "$1 e $2");
 
         /*
          * IMPORTANT: if the user utterance ends with a named entity (for example 'Voglio partire da piazza Castello')

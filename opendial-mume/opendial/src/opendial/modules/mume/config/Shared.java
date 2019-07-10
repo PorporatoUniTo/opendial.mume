@@ -138,7 +138,7 @@ public class Shared {
     // ALLE -> "dalle _ alle 18" => "Prendero' l'auto ALLE 8"
     public static final Set<String> DEPENDANT_TIME_CASE = new HashSet<>(Arrays.asList("alle", "le"));    // "fino a domani alle 17", "entro le 14 di dopodomani"
 
-    public static final Set<String> ADDRESS_CLUE = new HashSet<>(Arrays.asList("corso", "piazza", "strada", "via", "viale", "vicolo"));
+    public static final Set<String> ADDRESS_CLUE = new HashSet<>(Arrays.asList("corso", "piazza", "strada", "via", "viale", "vicolo", "palazzo", "porta"));
 
     public static final Set<String> START_VERBS = new HashSet<>(Arrays.asList("essere", "iniziare", "partire", "prendere", "prenotare", "serve", "usare", "volere",
             // FIXME

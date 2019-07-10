@@ -318,6 +318,7 @@ class LocationsExtractor {
                 cities.get(0).isStart = true;
             }
 
+
             // Here clue (e.g.: "da qui", "più vicino", ...)
             if (machinePrevState.contains("SLOT")) {
                 hereClue = tokens.stream().anyMatch(t -> HERE_WORDS.contains(t.originalText()));

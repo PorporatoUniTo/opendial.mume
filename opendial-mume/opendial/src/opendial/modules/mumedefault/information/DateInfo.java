@@ -19,7 +19,7 @@ public class DateInfo {
     public static final int WEEK_DAY_NUMBER = 7;
     public static final int YEAR_MONTH_NUMBER = 12;
 
-    private static final String PRESENT_REF = "PRESENT_REF";
+    public static final String PRESENT_REF = "PRESENT_REF";
 
     private String date;
     private List<IndexedWord> wordList;

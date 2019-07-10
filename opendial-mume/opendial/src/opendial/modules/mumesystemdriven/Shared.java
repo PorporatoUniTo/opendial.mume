@@ -47,7 +47,6 @@ public class Shared {
     public static final double DISTANCE_THRESHOLD = 5;
 
 
-
     // Google Maps
     public static final String KEY = "key=";
     public static final String LANGUAGE = "language=it";
@@ -127,7 +126,7 @@ public class Shared {
     public static final Set<String> LOCATION_END_VERBS = new HashSet<>(Arrays.asList("arrivare", "lasciare", "posare"));
     */
 
-    public static final Set<String> ADDRESS_CLUE = new HashSet<>(Arrays.asList("corso", "piazza", "strada", "via", "viale", "vicolo"));
+    public static final Set<String> ADDRESS_CLUE = new HashSet<>(Arrays.asList("corso", "piazza", "strada", "via", "viale", "vicolo", "palazzo", "porta"));
 
 
     public static final LinkedList<String> PUNCT = new LinkedList<>(Arrays.asList("", ".", " ", ",", ":", ";", "?", "!"));

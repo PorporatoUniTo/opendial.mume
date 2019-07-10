@@ -441,6 +441,12 @@ public class CarPoolingInformationExtraction implements Module {
                         // ... whose NERs are not among those in an adress
                         l.stream().noneMatch(n -> noDateIndexedWordIndeces.contains(n.index()))
                 ).collect(Collectors.toList());
+
+                // Filter out unspecific times (e.g., "sera")
+                timeAnnotations = timeAnnotations.stream().filter(l ->
+                        tokens.get(l.get(0).index() - 1).get(CoreAnnotations.NormalizedNamedEntityTagAnnotation.class).split("T")[1].matches("\\d{1,2}(:\\d\\d)?")
+                ).collect(Collectors.toList());
+
                 DatesTimesExtractor.getInstance().extractTimeAndDate(annotation, dateAnnotations, timeAnnotations, durationAnnotations, information, previousInformation, machinePrevState);
 
                 VehicleTypeExtractor.getInstance().extractVehicleType(userUtterance, information, previousInformation);
@@ -667,7 +673,8 @@ public class CarPoolingInformationExtraction implements Module {
         correctedUtterance = subCorrectedUtterance.replace(".", " e ").replace(";", " e ") + correctedUtterance.charAt(correctedUtterance.length() - 1);
 
         /* Tint has some problem with the hou format \d\d:\d\d */
-        correctedUtterance = correctedUtterance.replaceAll("(\\d{1,2}):(\\d\\d)", "$1 e $2");
+        /* Some user use '.' or even ',' instead */
+        correctedUtterance = correctedUtterance.replaceAll("(\\d{1,2})[:,.](\\d\\d)", "$1 e $2");
 
         /*
          * IMPORTANT: if the user utterance ends with a named entity (for example 'Voglio partire da piazza Castello')

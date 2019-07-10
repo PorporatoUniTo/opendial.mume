@@ -150,7 +150,7 @@ public class Shared {
     public static final Set<String> STRONG_END_DURATION_CASE = new HashSet<>(Arrays.asList("per", "dopo"));   // "per due ore", "posarla dopo un'ora"
     public static final Set<String> DEPENDANT_DURATION_CASE = new HashSet<>(Arrays.asList("fra", "tra"));   // "fra due ore mi serve un'auto", "poserò l'auto tra due ore"
 
-    public static final Set<String> ADDRESS_CLUE = new HashSet<>(Arrays.asList("corso", "piazza", "strada", "via", "viale", "vicolo", "ospedale", "palazzo"));
+    public static final Set<String> ADDRESS_CLUE = new HashSet<>(Arrays.asList("corso", "piazza", "strada", "via", "viale", "vicolo", "ospedale", "palazzo", "porta"));
 
     public static final Set<String> START_VERBS = new HashSet<>(Arrays.asList("essere", "iniziare", "partire", "prendere", "prenotare", "servire", "usare", "volere",
             // FIXME

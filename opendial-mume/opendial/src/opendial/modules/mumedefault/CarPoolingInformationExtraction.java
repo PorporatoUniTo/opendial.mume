@@ -12,8 +12,16 @@ import opendial.DialogueState;
 import opendial.DialogueSystem;
 import opendial.modules.Module;
 import opendial.modules.mumedefault.information.LocationInfo;
+import opendial.modules.mumedefault.information.Pair;
+import opendial.modules.mumesystemdriven.City;
+import opendial.modules.mumesystemdriven.Slot;
+import org.languagetool.JLanguageTool;
+import org.languagetool.language.Italian;
+import org.languagetool.rules.RuleMatch;
+import org.languagetool.rules.SuggestedReplacement;
 
 import java.io.*;
+import java.nio.charset.StandardCharsets;
 import java.time.ZonedDateTime;
 import java.util.*;
 import java.util.regex.Matcher;
@@ -50,11 +58,19 @@ public class CarPoolingInformationExtraction implements Module {
 
     // Tint
     TintPipeline pipeline;
+    TintPipeline correctionPipeline;
 
     // Google Goecoding
     static Properties localGoogleMapsAPIPropeties;
     static String[] macAddresses;
     static String[] channels;
+
+    // Othographic corrections
+    static JLanguageTool langTool;
+    // comment in to use statistical ngram data:
+    //langTool.activateLanguageModelRules(new File("/data/google-ngram-data"));
+    Map<String, Integer> unigrams;
+    Map<Pair<String, String>, Integer> bigrams;
 
     /**
      * Creates a new instance of the flight-booking module
@@ -91,6 +107,17 @@ public class CarPoolingInformationExtraction implements Module {
         );
         */
 
+        if (ORTHO_CORRECTION) {
+            correctionPipeline = new TintPipeline();
+            try {
+                File configFile = new File(CORRECTION_CONFIG);
+                correctionPipeline.loadPropertiesFromFile(configFile);
+            } catch (IOException exception) {
+                exception.printStackTrace();
+            }
+            correctionPipeline.load();
+        }
+
 
         /*===== CAUTION =====*/
         localGoogleMapsAPIPropeties = new Properties();
@@ -115,6 +142,36 @@ public class CarPoolingInformationExtraction implements Module {
         } else
             log.severe("Failed to load 'mac.address' property.");
         /*===================*/
+
+        if (ORTHO_CORRECTION) {
+            langTool = new JLanguageTool(new Italian());
+
+            unigrams = new HashMap<>();
+            try (BufferedReader uniReader = new BufferedReader(new FileReader("it\\sorted.it.word.unigrams", StandardCharsets.UTF_8))) {
+                String line = "";
+                while ((line = uniReader.readLine()) != null) {
+                    String[] pair = line.split("\t");
+                    unigrams.put(pair[1], Integer.parseInt(pair[0]));
+                }
+
+                log.info("Unigrams loaded.");
+            } catch (IOException ex) {
+                ex.printStackTrace();
+            }
+
+            bigrams = new HashMap<>();
+            try (BufferedReader biReader = new BufferedReader(new FileReader("it\\it.word.bigrams", StandardCharsets.UTF_8))) {
+                String line = "";
+                while ((line = biReader.readLine()) != null) {
+                    String[] pair = line.split("\t");
+                    bigrams.put(new Pair<>(pair[1], pair[2]), Integer.parseInt(pair[0]));
+                }
+
+                log.info("Bigrams loaded.");
+            } catch (IOException ex) {
+                ex.printStackTrace();
+            }
+        }
 
         paused = false;
     }
@@ -442,9 +499,15 @@ public class CarPoolingInformationExtraction implements Module {
                 // Set of te indeces of the IndexedWords corresponding to location
                 Set<Integer> noDateIndexedWordIndeces = noDateAnnotations.stream().flatMap(i -> i.getWordList().stream().map(IndexedWord::index)).collect(Collectors.toSet());
                 dateAnnotations = dateAnnotations.stream().filter(l ->  // Retains only those annotations...
-                        // ... whose NERs are not among those in an adress
+                        // ... whose NERs are not among those in an address
                         l.stream().noneMatch(n -> noDateIndexedWordIndeces.contains(n.index()))
                 ).collect(Collectors.toList());
+
+                // Filter out unspecific times (e.g., "sera")
+                timeAnnotations = timeAnnotations.stream().filter(l ->
+                        tokens.get(l.get(0).index() - 1).get(CoreAnnotations.NormalizedNamedEntityTagAnnotation.class).split("T")[1].matches("\\d{1,2}(:\\d\\d)?")
+                ).collect(Collectors.toList());
+
                 DatesTimesExtractor.getInstance().extractTimeAndDate(annotation, dateAnnotations, timeAnnotations, durationAnnotations, information, previousInformation, machinePrevState);
 
                 VehicleTypeExtractor.getInstance().extractVehicleType(userUtterance, information, previousInformation);
@@ -589,6 +652,79 @@ public class CarPoolingInformationExtraction implements Module {
         // Normalize whitespaces sequences with a single whitespace
         correctedUtterance = correctedUtterance.replaceAll("\\s+", " ");
 
+        if (ORTHO_CORRECTION) {
+            List<RuleMatch> matches;
+            try {
+                matches = langTool.check(correctedUtterance).stream().filter(m -> !m.getSuggestedReplacements().isEmpty()).collect(Collectors.toList());
+                while (!matches.isEmpty()) {
+                    RuleMatch match = matches.remove(0);
+                    /*
+                    System.out.println("Type: " + match.getType());
+                    System.out.println("Potential error at characters " +
+                            match.getFromPos() + "-" + match.getToPos() + ": " +
+                            match.getMessage());
+                    System.out.println("Suggested correction(s): [\n" +
+                            match.getSuggestedReplacementObjects().stream().map(r -> r.getReplacement() +
+                                    " (" + unigrams.getOrDefault(r.getReplacement().toLowerCase(), 0) + ")").collect(Collectors.joining("\n")) + "\n]");
+                    if (!match.getFeatures().entrySet().isEmpty())
+                        for (Map.Entry<String, Float> feat : match.getFeatures().entrySet())
+                            System.out.println(feat.getKey() + " => " + feat.getValue());
+                    else
+                        System.out.println("No features");
+                    */
+                    // Ignore day names due to problems with the accent correction: done later
+                    String matchedSubstring = correctedUtterance.substring(match.getFromPos(), match.getToPos()).toLowerCase();
+                    if (!matchedSubstring.matches("(luned.|marted.|mercoled.|gioved.|venerd.)") &&
+                            // Avoids the corrections of slot names
+                            Arrays.stream(Slot.values()).map(s -> s.getName().toLowerCase()).noneMatch(s -> s.equals(matchedSubstring)) &&
+                            // Avoids the corrections of city names
+                            Arrays.stream(City.values()).map(s -> s.getName().toLowerCase()).noneMatch(s -> s.equals(matchedSubstring))
+                        // FIXME address wrong correction avoidance
+                    ) {
+                        Annotation annotation = correctionPipeline.runRaw(correctedUtterance);
+                        List<CoreLabel> tokens = annotation.get(CoreAnnotations.TokensAnnotation.class);
+                        // +1 and -1 in start and end token position due to white spaces
+                        Optional<CoreLabel> prevToken = tokens.stream().filter(t -> t.endPosition() == match.getFromPos() - 1).findAny();
+                        Optional<CoreLabel> subseqToken = tokens.stream().filter(t -> t.beginPosition() == match.getToPos() + 1).findAny();
+                        String bigramReplacement = "";
+                        int currentMax = Integer.MIN_VALUE;
+                        for (SuggestedReplacement rep : match.getSuggestedReplacementObjects()) {
+                            if (prevToken.isPresent()) {
+                                // Get the count of the prevToken-rep pair
+                                int currentCount = bigrams.getOrDefault(new Pair<>(prevToken.get().originalText(), rep.getReplacement()), Integer.MIN_VALUE);
+                                if (currentCount > currentMax) {
+                                    bigramReplacement = rep.getReplacement();
+                                    currentMax = currentCount;
+                                }
+                            }
+                            if (subseqToken.isPresent()) {
+                                // Get the count of the rep-subseqToken pair
+                                int currentCount = bigrams.getOrDefault(new Pair<>(rep.getReplacement(), subseqToken.get().originalText()), Integer.MIN_VALUE);
+                                if (currentCount > currentMax) {
+                                    bigramReplacement = rep.getReplacement();
+                                    currentMax = currentCount;
+                                }
+                            }
+                        }
+                        if (!bigramReplacement.isEmpty())
+                            correctedUtterance = correctedUtterance.substring(0, match.getFromPos()) + bigramReplacement + correctedUtterance.substring(match.getToPos());
+
+                        if (correctedUtterance.equals(originalUtterance)) {
+                            Optional<SuggestedReplacement> unigramReplacement = match.getSuggestedReplacementObjects().stream().filter(r -> unigrams.containsKey(r.getReplacement().toLowerCase())).max(Comparator.comparingInt(r -> unigrams.get(r.getReplacement().toLowerCase())));
+                            if (unigramReplacement.isPresent())
+                                correctedUtterance = correctedUtterance.substring(0, match.getFromPos()) + unigramReplacement.get().getReplacement() + correctedUtterance.substring(match.getToPos());
+                        }
+
+                        matches = langTool.check(correctedUtterance).stream().filter(m -> !m.getSuggestedReplacements().isEmpty()).collect(Collectors.toList());
+                    }
+                }
+            } catch (IOException iOE) {
+                iOE.printStackTrace();
+            }
+
+            log.info("Orthographically corrected utterance: '" + correctedUtterance + "'");
+        }
+
         /*
          * In one cases the hour starts with a vovel, "all'una":
          *  Delete the apostrophe and add "-le" ("all'una -> alle una") to reduce the possible utterance forms' number.
@@ -598,8 +734,8 @@ public class CarPoolingInformationExtraction implements Module {
         /*
          * Sometimes the word "parcheggio" interfer with the resolution of the related LocationInfo, so delete it
          */
-        correctedUtterance = correctedUtterance.replaceAll("pi. vicino a", "")
-                .replaceAll("pi. vicino", "qui")
+        correctedUtterance = correctedUtterance.replaceAll("pi.? vicino a", "")
+                .replaceAll("pi.? vicino", "qui")
                 .replaceAll("[Dd]al [Pp]archeggio", "da")
                 .replaceAll("[Aa]l [Pp]archeggio", "a")
                 .replaceAll("[Nn]el [Pp]archeggio", "a");
@@ -642,7 +778,7 @@ public class CarPoolingInformationExtraction implements Module {
             Matcher monthDayMatcher = monthDayPattern.matcher(correctedUtterance);
             String monthName = "";
             for (String month : new String[]{"gennaio", "febbraio", "marzo", "aprile", "maggio", "giugno", "luglio", "agosto", "settembre", "ottobre", "novembre", "dicembre"})
-                if (correctedUtterance.contains(month))
+                if (correctedUtterance.toLowerCase().contains(month))
                     monthName = month;
             if (monthName.isEmpty())
                 // If the user has given a month already...
@@ -720,8 +856,9 @@ public class CarPoolingInformationExtraction implements Module {
         String subCorrectedUtterance = correctedUtterance.substring(0, correctedUtterance.length() - 1);
         correctedUtterance = subCorrectedUtterance.replace(".", " e ").replace(";", " e ") + correctedUtterance.charAt(correctedUtterance.length() - 1);
 
-        /* Tint has some problem with the hou format \d\d:\d\d */
-        correctedUtterance = correctedUtterance.replaceAll("(\\d{1,2}):(\\d\\d)", "$1 e $2");
+        /* Tint has some problem with the hour format \d\d:\d\d */
+        /* Some user use '.' or even ',' instead */
+        correctedUtterance = correctedUtterance.replaceAll("(\\d{1,2})[:,.](\\d\\d)", "$1 e $2");
 
         /*
          * IMPORTANT: if the user utterance ends with a named entity (for example 'Voglio partire da piazza Castello')
