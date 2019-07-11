@@ -181,7 +181,8 @@ public class Shared {
             // ,"ora"    FIXME 'ora' is interpreted like a duration
     ));
 
-    public static final Set<String> HERE_WORDS = new HashSet<>(Arrays.asList("qui", "qua", "sono", "vicino"));
+    public static final Set<String> HERE_WORDS = new HashSet<>(Arrays.asList("qui", "qua", "vicino"));
+    public static final List<String> HERE_PHRASES = new ArrayList<>(Arrays.asList("dove sono"));
 
     /* Two steps check
     static {

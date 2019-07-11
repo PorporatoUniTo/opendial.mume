@@ -101,7 +101,7 @@ class LocationsExtractor {
                         }
                     }
 
-                    /* GOOGLE_API_ADDRESS */
+                    /* ADDRESSES */
                     for (LocationInfo address : addresses) {
                         if (address.getCaseType() != null) {
                             /* "... da piazza Vittorio Veneto..." */
@@ -159,7 +159,9 @@ class LocationsExtractor {
                             city.isEnd = true;
                         }
                         /* "Voglio andare a Nichelino [domani]." */
-                        else if (newEndCity == null && WEAK_END_CITY_CASE.contains(city.getCaseType()) && cities.size() == 1) {
+                        else if (newEndCity == null && WEAK_END_CITY_CASE.contains(city.getCaseType()) &&
+                                //If there are addresses or slots, the city could be a specification, and there's still ambiguaty
+                                cities.size() == 1 && addresses.isEmpty() && slots.isEmpty()) {
                             newEndCity = city;
                             city.isEnd = true;
                         }
@@ -170,13 +172,13 @@ class LocationsExtractor {
                         if (address.getCaseType() != null && DEPENDANT_ADDRESS_CASE.contains(address.getCaseType())) {
                             /* "... da Pinerolo in piazza Avis..." */
                             if (newStartAddress == null && !address.isEnd &&
-                                    newStartCity != null && newStartCity.isGovernorOf(address)) {
+                                    (newStartSlot != null || newStartCity != null) && newStartCity.isGovernorOf(address)) {
                                 newStartAddress = address;
                                 address.isStart = true;
                             }
                             /* "... fino a Nichelino in via del Castello..." */
                             if (newEndAddress == null &&
-                                    newEndCity != null && newEndCity.isGovernorOf(address)) {
+                                    (newEndSlot != null || newEndCity != null) && newEndCity.isGovernorOf(address)) {
                                 newEndAddress = address;
                                 address.isEnd = true;
                             }
@@ -192,7 +194,8 @@ class LocationsExtractor {
                             slot.isEnd = true;
                         }
                         /* "Voglio andare a TORTONA [domani]." */
-                        else if (newEndSlot == null && WEAK_END_SLOT_CASE.contains(slot.getCaseType()) && slots.size() == 1) {
+                        else if (newEndSlot == null && WEAK_END_SLOT_CASE.contains(slot.getCaseType()) &&
+                                slots.size() == 1 && cities.isEmpty() && addresses.isEmpty()) {
                             newEndSlot = slot;
                             slot.isEnd = true;
                         } else if (slot.getCaseType() != null && DEPENDANT_SLOT_CASE.contains(slot.getCaseType())) {
@@ -252,7 +255,7 @@ class LocationsExtractor {
                     }
                 }
 
-                /* GOOGLE_API_ADDRESS */
+                /* ADDRESSES */
                 for (LocationInfo address : addresses) {
                     if (newStartAddress == null && START_VERBS.contains(address.getFirstVerbGovernorLemma()) && !address.isEnd) {
                         newStartAddress = address;

@@ -110,7 +110,7 @@ public class Shared {
     public static final Set<String> STRONG_END_CITY_CASE = new HashSet<>(Arrays.asList("fino", "per"));    // "fino a Nichelino", "Voglio aprtire subiyo per Rivoli."
     // A -> "da Nichelino a Pinerolo" => "Voglio andare da piazza Vittorio Veneto A Pinerolo a Nichelino"
     public static final Set<String> DEPENDANT_CITY_CASE = new HashSet<>(Arrays.asList("a", "di"));  // "voglio partire da BERNINI a Torino", "voglio partire da via Morante di Nichelino"
-    public static final Set<String> WEAK_START_CITY_CASE = new HashSet<>(Arrays.asList("di"));  // "voglio una delle macchine di Nichelino"
+    public static final Set<String> WEAK_START_CITY_CASE = new HashSet<>(Arrays.asList("a", "di"));  // "voglio una delle macchine di Nichelino"
     public static final Set<String> WEAK_END_CITY_CASE = new HashSet<>(Arrays.asList("a")); // "da Pinerolo a Nichelino"
 
     public static final Set<String> STRONG_START_ADDRESS_CASE = new HashSet<>(Arrays.asList("da"));  // "da piazza Vittorio Veneto"

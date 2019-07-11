@@ -380,47 +380,64 @@ class DatesTimesExtractor {
             }
              */
 
-            /*
-            /* The user did say something like "mi serve un'auto dopodomani", meaning that start and end date are 'dopodomani' /
-            if (newStartDate == null && newStartTime == null && newEndDate == null && newEndTime == null && dates.size() == 1) {
+            /* The user did say something like "mi serve un'auto dopodomani", meaning that start and end date are 'dopodomani' */
+            if (newStartDate == null && newEndDate == null &&
+                    // newStartTime == null && newEndTime == null &&
+                    machinePrevState.endsWith("START_SLOT_AND_DATE") && dates.size() == 1) {
                 newStartDate = dates.get(0);
                 newEndDate = dates.get(0);
                 dates.get(0).isStart = true;
                 dates.get(0).isEnd = true;
             }
-             */
 
 
             /* Check if the user is answering to targetted questions */
-            if (times.size() == 1 && !times.get(0).isEnd && newStartTime == null && newTimeToStart == null && (machinePrevState.endsWith("START_TIME") || machinePrevState.endsWith("START_DATE"))) {
+            /* If this is the case, it's probable that the first temporal information, if it is not anything else, it is the answer to the question */
+            if (// times.size() == 1 &&
+                    !times.isEmpty() &&
+                            !times.get(0).isEnd && newStartTime == null && newTimeToStart == null && (machinePrevState.endsWith("START_TIME") || machinePrevState.endsWith("START_DATE"))) {
                 newStartTime = times.get(0);
                 newStartTime.isStart = true;
             }
-            if (dates.size() == 1 && !dates.get(0).isEnd && newStartDate == null && newTimeToEnd == null && machinePrevState.endsWith("START_DATE")) {
+            if (// dates.size() == 1 &&
+                    !dates.isEmpty() &&
+                            !dates.get(0).isEnd && newStartDate == null && newPeriodToStart == null && machinePrevState.endsWith("START_DATE")) {
                 newStartDate = dates.get(0);
                 newStartDate.isStart = true;
             }
-            if (times.size() == 1 && !times.get(0).isStart && newEndTime == null && newPeriodToStart == null && (machinePrevState.endsWith("END_TIME_AND_DATE") || machinePrevState.endsWith("END_TIME") || machinePrevState.endsWith("END_DATE"))) {
+            if (// times.size() == 1 &&
+                    !times.isEmpty() &&
+                            !times.get(0).isStart && newEndTime == null && newTimeToEnd == null && (machinePrevState.endsWith("END_TIME_AND_DATE") || machinePrevState.endsWith("END_TIME") || machinePrevState.endsWith("END_DATE"))) {
                 newEndTime = times.get(0);
                 newEndTime.isEnd = true;
             }
-            if (dates.size() == 1 && !dates.get(0).isStart && newEndDate == null && newPeriodToEnd == null && (machinePrevState.endsWith("END_TIME_AND_DATE") || machinePrevState.endsWith("END_DATE"))) {
+            if (// dates.size() == 1 &&
+                    !dates.isEmpty() &&
+                            !dates.get(0).isStart && newEndDate == null && newPeriodToEnd == null && (machinePrevState.endsWith("END_TIME_AND_DATE") || machinePrevState.endsWith("END_DATE"))) {
                 newEndDate = dates.get(0);
                 newEndDate.isEnd = true;
             }
-            if (timeDurs.size() == 1 && !timeDurs.get(0).isEnd && newStartTime == null && newTimeToStart == null && (machinePrevState.endsWith("START_TIME") || machinePrevState.endsWith("START_DATE"))) {
+            if (// timeDurs.size() == 1 &&
+                    !timeDurs.isEmpty() &&
+                            !timeDurs.get(0).isEnd && newStartTime == null && newTimeToStart == null && (machinePrevState.endsWith("START_TIME") || machinePrevState.endsWith("START_DATE"))) {
                 newTimeToStart = timeDurs.get(0);
                 newTimeToStart.isStart = true;
             }
-            if (dateDurs.size() == 1 && !dateDurs.get(0).isEnd && newStartDate == null && newTimeToEnd == null && machinePrevState.endsWith("START_DATE")) {
+            if (// dateDurs.size() == 1 &&
+                    !dateDurs.isEmpty() &&
+                            !dateDurs.get(0).isEnd && newStartDate == null && newPeriodToStart == null && machinePrevState.endsWith("START_DATE")) {
                 newPeriodToStart = dateDurs.get(0);
                 newPeriodToStart.isStart = true;
             }
-            if (timeDurs.size() == 1 && !timeDurs.get(0).isStart && newEndTime == null && newPeriodToStart == null && (machinePrevState.endsWith("END_TIME_AND_DATE") || machinePrevState.endsWith("END_TIME") || machinePrevState.endsWith("END_DATE"))) {
+            if (// timeDurs.size() == 1 &&
+                    !timeDurs.isEmpty() &&
+                            !timeDurs.get(0).isStart && newEndTime == null && newTimeToEnd == null && (machinePrevState.endsWith("END_TIME_AND_DATE") || machinePrevState.endsWith("END_TIME") || machinePrevState.endsWith("END_DATE"))) {
                 newTimeToEnd = timeDurs.get(0);
                 newTimeToEnd.isEnd = true;
             }
-            if (dateDurs.size() == 1 && !dateDurs.get(0).isStart && newEndDate == null && newPeriodToEnd == null && (machinePrevState.endsWith("END_TIME_AND_DATE") || machinePrevState.endsWith("END_DATE"))) {
+            if (// dateDurs.size() == 1 &&
+                    !dateDurs.isEmpty() &&
+                            !dateDurs.get(0).isStart && newEndDate == null && newPeriodToEnd == null && (machinePrevState.endsWith("END_TIME_AND_DATE") || machinePrevState.endsWith("END_DATE"))) {
                 newPeriodToEnd = dateDurs.get(0);
                 newPeriodToEnd.isEnd = true;
             }

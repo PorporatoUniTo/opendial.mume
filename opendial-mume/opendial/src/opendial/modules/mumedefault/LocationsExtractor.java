@@ -101,7 +101,7 @@ class LocationsExtractor {
                         }
                     }
 
-                    /* GOOGLE_API_ADDRESS */
+                    /* ADDRESSES */
                     for (LocationInfo address : addresses) {
                         if (address.getCaseType() != null) {
                             /* "... da piazza Vittorio Veneto..." */
@@ -146,8 +146,8 @@ class LocationsExtractor {
                             }
                             /* "... a viale Segre a Nichelino..." */
                             if (newEndCity == null &&
-                                    (newEndAddress != null && newEndAddress.isGovernorOf(city)) ||
-                                    (newEndSlot != null && newEndSlot.isGovernorOf(city))) {
+                                    (newEndAddress != null && newEndAddress.isGovernorOf(city) ||
+                                            newEndSlot != null && newEndSlot.isGovernorOf(city))) {
                                 newEndCity = city;
                                 city.isEnd = true;
                             }
@@ -158,11 +158,13 @@ class LocationsExtractor {
                             newEndCity = city;
                             city.isEnd = true;
                         }
-                        /* "Voglio andare a Nichelino [domani]." */
+                        /* VERB
+                         "Voglio andare a Nichelino [domani]." /
                         else if (newEndCity == null && WEAK_END_CITY_CASE.contains(city.getCaseType()) && cities.size() == 1) {
                             newEndCity = city;
                             city.isEnd = true;
                         }
+                         */
                     }
 
                     /* ADDRESSES */
@@ -187,17 +189,7 @@ class LocationsExtractor {
 
                     /* SLOTS */
                     for (LocationInfo slot : slots) {
-                        /* "... da BERNINI... a SAVOIA..." */
-                        if (newEndSlot == null && WEAK_END_SLOT_CASE.contains(slot.getCaseType()) &&
-                                newStartSlot != null && STRONG_START_SLOT_CASE.contains(newStartSlot.getCaseType())) {
-                            newEndSlot = slot;
-                            slot.isEnd = true;
-                        }
-                        /* "Voglio andare a TORTONA [domani]." */
-                        else if (newEndSlot == null && WEAK_END_SLOT_CASE.contains(slot.getCaseType()) && slots.size() == 1) {
-                            newEndSlot = slot;
-                            slot.isEnd = true;
-                        } else if (slot.getCaseType() != null && DEPENDANT_SLOT_CASE.contains(slot.getCaseType())) {
+                        if (slot.getCaseType() != null && DEPENDANT_SLOT_CASE.contains(slot.getCaseType())) {
                             /* "... da Torino a BERNINI..." */
                             if (newStartSlot == null &&
                                     (newStartAddress != null && newStartAddress.isGovernorOf(slot) ||
@@ -212,6 +204,17 @@ class LocationsExtractor {
                                 newEndSlot = slot;
                                 slot.isEnd = true;
                             }
+                        }
+                        /* "... da BERNINI... a SAVOIA..." */
+                        else if (newEndSlot == null && WEAK_END_SLOT_CASE.contains(slot.getCaseType()) &&
+                                newStartSlot != null && STRONG_START_SLOT_CASE.contains(newStartSlot.getCaseType())) {
+                            newEndSlot = slot;
+                            slot.isEnd = true;
+                        }
+                        /* "Voglio andare a TORTONA [domani]." */
+                        else if (newEndSlot == null && WEAK_END_SLOT_CASE.contains(slot.getCaseType()) && slots.size() == 1) {
+                            newEndSlot = slot;
+                            slot.isEnd = true;
                         }
                     }
 
@@ -254,7 +257,7 @@ class LocationsExtractor {
                     }
                 }
 
-                /* GOOGLE_API_ADDRESS */
+                /* ADDRESSES */
                 for (LocationInfo address : addresses) {
                     if (newStartAddress == null && START_VERBS.contains(address.getFirstVerbGovernorLemma()) && !address.isEnd) {
                         newStartAddress = address;
@@ -319,9 +322,17 @@ class LocationsExtractor {
             }
 
 
-            // Here clue (e.g.: "da qui", "più vicino", ...)
+            // Here clue (e.g.: "da qui", "più vicino", "dove sono ora", ...)
             if (machinePrevState.contains("SLOT")) {
                 hereClue = tokens.stream().anyMatch(t -> HERE_WORDS.contains(t.originalText()));
+                // if (!hereClue)
+                for (int i = 0; !hereClue && i < HERE_PHRASES.size(); i++) {
+                    String phrase = HERE_PHRASES.get(i);
+                    int phraseLength = HERE_PHRASES.get(i).split(" ").length;
+                    for (int j = 0; j < tokens.size() - phraseLength; j++)
+                        if (tokens.subList(j, j + phraseLength).stream().map(CoreLabel::originalText).collect(Collectors.joining(" ")).equals(phrase))
+                            hereClue = true;
+                }
                 if (!hereClue && newStartAddress == null && newStartCity == null && newStartSlot == null
                     // && newEndAddress == null && newEndCity == null && newEndSlot == null
                 )
