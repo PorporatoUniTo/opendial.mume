@@ -94,17 +94,6 @@ public class CarPoolingInformationExtraction implements Module {
         );
         */
 
-        if (ORTHO_CORRECTION) {
-            correctionPipeline = new TintPipeline();
-            try {
-                File configFile = new File(CORRECTION_CONFIG);
-                correctionPipeline.loadPropertiesFromFile(configFile);
-            } catch (IOException exception) {
-                exception.printStackTrace();
-            }
-            correctionPipeline.load();
-        }
-
 
         /*===== CAUTION =====*/
         localGoogleMapsAPIPropeties = new Properties();
