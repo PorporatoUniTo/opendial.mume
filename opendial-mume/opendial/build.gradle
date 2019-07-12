@@ -6,6 +6,7 @@
 apply plugin: 'java'
 apply plugin: 'application'
 apply plugin: 'eclipse'
+apply plugin: 'idea'
 mainClassName = 'opendial.DialogueSystem'
 version = '1.4'
 
@@ -63,8 +64,8 @@ dependencies {
     compile group: 'org.jfree', name: 'jfreechart', version: '1.0.19+'
     compile group: 'net.sf.jung', name: 'jung-graph-impl', version: '2.0.1'
     compile group: 'net.sf.jung', name: 'jung-visualization', version: '2.0.1'
-//// 	compile group: 'de.dfki.mary', name: 'marytts-runtime', version: '5.2-beta2'
-//// 	compile group: 'de.dfki.mary', name: 'voice-cmu-slt-hsmm', version: '5.2-beta2'
+////  compile group: 'de.dfki.mary', name: 'marytts-runtime', version: '5.2-beta2'
+////  compile group: 'de.dfki.mary', name: 'voice-cmu-slt-hsmm', version: '5.2-beta2'
 //  compile group: 'org.apache.commons', name: 'commons-math3', version: '3.2'
 //  compile group: 'edu.cmu.sphinx', name: 'sphinx4-core', version:'5prealpha-SNAPSHOT'
 //  compile group: 'edu.cmu.sphinx', name: 'sphinx4-data', version:'5prealpha-SNAPSHOT'
@@ -86,6 +87,7 @@ dependencies {
     compile 'eu.fbk.dh:tint-runner:0.2'
     compile 'eu.fbk.dh:tint-geoloc-annotator:0.1'
 
+//    compile 'org.languagetool:language-it:4.5'
 }
 
 
@@ -134,7 +136,6 @@ task compile(type: Copy) {
     }
 }
 
-
 /**
  * Making sure the JVM arguments are passed in the script
  */
@@ -161,6 +162,15 @@ eclipse {
     }
 }
 
+/**
+ * Download source code of the dependencies (when available)
+ */
+idea {
+    module {
+        downloadSources = true
+    }
+}
+
 
 /**
  * Compiles the jar file for the OpenDial java files
@@ -173,6 +183,9 @@ jar {
             from 'resources'
             into 'build/resources/main/resources'
         }
+
+        // Include dependencies but breaks the jar
+//        from { configurations.runtime.collect { it.isDirectory() ? it : zipTree(it) } }
     }
     manifest {
         attributes('Main-Class': project.mainClassName)

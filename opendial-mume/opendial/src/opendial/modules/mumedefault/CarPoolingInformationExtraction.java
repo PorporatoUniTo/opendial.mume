@@ -15,10 +15,6 @@ import opendial.modules.mumedefault.information.LocationInfo;
 import opendial.modules.mumedefault.information.Pair;
 import opendial.modules.mumesystemdriven.City;
 import opendial.modules.mumesystemdriven.Slot;
-import org.languagetool.JLanguageTool;
-import org.languagetool.language.Italian;
-import org.languagetool.rules.RuleMatch;
-import org.languagetool.rules.SuggestedReplacement;
 
 import java.io.*;
 import java.nio.charset.StandardCharsets;
@@ -651,79 +647,6 @@ public class CarPoolingInformationExtraction implements Module {
 
         // Normalize whitespaces sequences with a single whitespace
         correctedUtterance = correctedUtterance.replaceAll("\\s+", " ");
-
-        if (ORTHO_CORRECTION) {
-            List<RuleMatch> matches;
-            try {
-                matches = langTool.check(correctedUtterance).stream().filter(m -> !m.getSuggestedReplacements().isEmpty()).collect(Collectors.toList());
-                while (!matches.isEmpty()) {
-                    RuleMatch match = matches.remove(0);
-                    /*
-                    System.out.println("Type: " + match.getType());
-                    System.out.println("Potential error at characters " +
-                            match.getFromPos() + "-" + match.getToPos() + ": " +
-                            match.getMessage());
-                    System.out.println("Suggested correction(s): [\n" +
-                            match.getSuggestedReplacementObjects().stream().map(r -> r.getReplacement() +
-                                    " (" + unigrams.getOrDefault(r.getReplacement().toLowerCase(), 0) + ")").collect(Collectors.joining("\n")) + "\n]");
-                    if (!match.getFeatures().entrySet().isEmpty())
-                        for (Map.Entry<String, Float> feat : match.getFeatures().entrySet())
-                            System.out.println(feat.getKey() + " => " + feat.getValue());
-                    else
-                        System.out.println("No features");
-                    */
-                    // Ignore day names due to problems with the accent correction: done later
-                    String matchedSubstring = correctedUtterance.substring(match.getFromPos(), match.getToPos()).toLowerCase();
-                    if (!matchedSubstring.matches("(luned.|marted.|mercoled.|gioved.|venerd.)") &&
-                            // Avoids the corrections of slot names
-                            Arrays.stream(Slot.values()).map(s -> s.getName().toLowerCase()).noneMatch(s -> s.equals(matchedSubstring)) &&
-                            // Avoids the corrections of city names
-                            Arrays.stream(City.values()).map(s -> s.getName().toLowerCase()).noneMatch(s -> s.equals(matchedSubstring))
-                        // FIXME address wrong correction avoidance
-                    ) {
-                        Annotation annotation = correctionPipeline.runRaw(correctedUtterance);
-                        List<CoreLabel> tokens = annotation.get(CoreAnnotations.TokensAnnotation.class);
-                        // +1 and -1 in start and end token position due to white spaces
-                        Optional<CoreLabel> prevToken = tokens.stream().filter(t -> t.endPosition() == match.getFromPos() - 1).findAny();
-                        Optional<CoreLabel> subseqToken = tokens.stream().filter(t -> t.beginPosition() == match.getToPos() + 1).findAny();
-                        String bigramReplacement = "";
-                        int currentMax = Integer.MIN_VALUE;
-                        for (SuggestedReplacement rep : match.getSuggestedReplacementObjects()) {
-                            if (prevToken.isPresent()) {
-                                // Get the count of the prevToken-rep pair
-                                int currentCount = bigrams.getOrDefault(new Pair<>(prevToken.get().originalText(), rep.getReplacement()), Integer.MIN_VALUE);
-                                if (currentCount > currentMax) {
-                                    bigramReplacement = rep.getReplacement();
-                                    currentMax = currentCount;
-                                }
-                            }
-                            if (subseqToken.isPresent()) {
-                                // Get the count of the rep-subseqToken pair
-                                int currentCount = bigrams.getOrDefault(new Pair<>(rep.getReplacement(), subseqToken.get().originalText()), Integer.MIN_VALUE);
-                                if (currentCount > currentMax) {
-                                    bigramReplacement = rep.getReplacement();
-                                    currentMax = currentCount;
-                                }
-                            }
-                        }
-                        if (!bigramReplacement.isEmpty())
-                            correctedUtterance = correctedUtterance.substring(0, match.getFromPos()) + bigramReplacement + correctedUtterance.substring(match.getToPos());
-
-                        if (correctedUtterance.equals(originalUtterance)) {
-                            Optional<SuggestedReplacement> unigramReplacement = match.getSuggestedReplacementObjects().stream().filter(r -> unigrams.containsKey(r.getReplacement().toLowerCase())).max(Comparator.comparingInt(r -> unigrams.get(r.getReplacement().toLowerCase())));
-                            if (unigramReplacement.isPresent())
-                                correctedUtterance = correctedUtterance.substring(0, match.getFromPos()) + unigramReplacement.get().getReplacement() + correctedUtterance.substring(match.getToPos());
-                        }
-
-                        matches = langTool.check(correctedUtterance).stream().filter(m -> !m.getSuggestedReplacements().isEmpty()).collect(Collectors.toList());
-                    }
-                }
-            } catch (IOException iOE) {
-                iOE.printStackTrace();
-            }
-
-            log.info("Orthographically corrected utterance: '" + correctedUtterance + "'");
-        }
 
         /*
          * In one cases the hour starts with a vovel, "all'una":

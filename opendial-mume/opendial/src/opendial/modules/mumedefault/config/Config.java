@@ -5,7 +5,6 @@ import java.io.File;
 public class Config {
     private static final String s = File.separator;
 
-    public static final boolean ORTHO_CORRECTION = false;
     public static final String CORRECTION_CONFIG = "configs" + s + "correction-config.properties";
 
     public static final String TINT_CONFIG = "configs" + s + "default-config.properties";
