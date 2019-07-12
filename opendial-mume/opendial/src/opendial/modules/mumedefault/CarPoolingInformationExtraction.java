@@ -12,10 +12,8 @@ import opendial.DialogueState;
 import opendial.DialogueSystem;
 import opendial.modules.Module;
 import opendial.modules.mumedefault.information.LocationInfo;
-import opendial.modules.mumedefault.information.Pair;
 
 import java.io.*;
-import java.nio.charset.StandardCharsets;
 import java.time.ZonedDateTime;
 import java.util.*;
 import java.util.regex.Matcher;
@@ -118,36 +116,6 @@ public class CarPoolingInformationExtraction implements Module {
         } else
             log.severe("Failed to load 'mac.address' property.");
         /*===================*/
-
-        if (ORTHO_CORRECTION) {
-            langTool = new JLanguageTool(new Italian());
-
-            unigrams = new HashMap<>();
-            try (BufferedReader uniReader = new BufferedReader(new FileReader("it\\sorted.it.word.unigrams", StandardCharsets.UTF_8))) {
-                String line = "";
-                while ((line = uniReader.readLine()) != null) {
-                    String[] pair = line.split("\t");
-                    unigrams.put(pair[1], Integer.parseInt(pair[0]));
-                }
-
-                log.info("Unigrams loaded.");
-            } catch (IOException ex) {
-                ex.printStackTrace();
-            }
-
-            bigrams = new HashMap<>();
-            try (BufferedReader biReader = new BufferedReader(new FileReader("it\\it.word.bigrams", StandardCharsets.UTF_8))) {
-                String line = "";
-                while ((line = biReader.readLine()) != null) {
-                    String[] pair = line.split("\t");
-                    bigrams.put(new Pair<>(pair[1], pair[2]), Integer.parseInt(pair[0]));
-                }
-
-                log.info("Bigrams loaded.");
-            } catch (IOException ex) {
-                ex.printStackTrace();
-            }
-        }
 
         paused = false;
     }
