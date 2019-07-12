@@ -13,8 +13,6 @@ import opendial.DialogueSystem;
 import opendial.modules.Module;
 import opendial.modules.mumedefault.information.LocationInfo;
 import opendial.modules.mumedefault.information.Pair;
-import opendial.modules.mumesystemdriven.City;
-import opendial.modules.mumesystemdriven.Slot;
 
 import java.io.*;
 import java.nio.charset.StandardCharsets;
@@ -60,13 +58,6 @@ public class CarPoolingInformationExtraction implements Module {
     static Properties localGoogleMapsAPIPropeties;
     static String[] macAddresses;
     static String[] channels;
-
-    // Othographic corrections
-    static JLanguageTool langTool;
-    // comment in to use statistical ngram data:
-    //langTool.activateLanguageModelRules(new File("/data/google-ngram-data"));
-    Map<String, Integer> unigrams;
-    Map<Pair<String, String>, Integer> bigrams;
 
     /**
      * Creates a new instance of the flight-booking module
